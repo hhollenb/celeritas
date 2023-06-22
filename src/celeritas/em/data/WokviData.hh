@@ -34,7 +34,6 @@ struct WokviElementData
     real_type screen_r_sq;
     real_type screen_r_sq_elec;
     real_type form_factor;
-    real_type inv_a23;
 
     real_type mott_coeff[5][6];
 };
@@ -60,12 +59,8 @@ struct WokviData
     ElementItems<WokviElementData> elem_data;
 
     // Other parameters
-    real_type factor_A2;  // 0.5 * (angleLimitFactor * hbarc / fermi)^2
-    real_type factor_B1;  // 0.5 * pi * alpha^2
     real_type coeff;  // 2 pi (e_mass * e_radius)^2
     real_type electron_mass;
-    bool is_combined;
-    real_type polar_angle_limit;
     NuclearFormFactorType form_factor_type;
 
     explicit CELER_FUNCTION operator bool() const
