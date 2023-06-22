@@ -49,6 +49,7 @@ MottXsCalculator::MottXsCalculator(detail::WokviStateHelper const& state)
  * The parameter fcos_t is equivalent to
  *      sqrt(1 - cos(theta))
  * where theta is the scattered angle in the z-aligned momentum frame.
+ * TODO: Reference?
  */
 CELER_FUNCTION
 real_type MottXsCalculator::operator()(real_type fcos_t) const

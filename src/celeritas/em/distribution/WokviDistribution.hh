@@ -57,11 +57,6 @@ class WokviDistribution
     // Nuclear form factor
     const real_type form_factor_A_;
 
-    // Constants used in rejection sampling?
-    const real_type factor_B_;
-    const real_type factor_B1_;
-    const real_type factor_D_;
-
     // Ratio of electron to total cross section
     real_type elec_ratio_;
 
@@ -88,10 +83,6 @@ WokviDistribution::WokviDistribution(detail::WokviStateHelper const& state,
     , data_(data)
     , form_factor_A_(state.element_data.form_factor
                      * state.inc_mom_sq)  // TODO: Reference?
-    , factor_B_(0.5 / state.inv_beta_sq)  // TODO: Reference? Always 0.5 spin?
-    , factor_B1_(data.factor_B1)
-    // TODO: Reference?
-    , factor_D_(std::sqrt(state.inc_mom_sq) / state.target_mass())
 {
     // Calculate cross sections
     const WokviXsCalculator xsec(state);
@@ -156,11 +147,6 @@ CELER_FUNCTION Real3 WokviDistribution::operator()(Engine& rng) const
     MottXsCalculator mott_xsec(state_);
     const real_type fm = form_factor(form_factor, z1);
     const real_type grej = mott_xsec(sqrt(z1)) * ipow<2>(fm);
-
-    // if not using mott?
-    // const grej = (1.0 - z1 * factor_B_ + factor_B1_ * state_.target_Z() *
-    // sqrt(z1 * factor_B_) * (2.0 - z1)) * ipow<2>(fm) / (1.0 + z1 *
-    // factor_D_);
 
     if (sample(rng) > g_rej)
     {

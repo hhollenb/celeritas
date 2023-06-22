@@ -48,9 +48,7 @@ struct WokviStateHelper
     const real_type inc_energy;
     const real_type inc_mass;
     const real_type inc_mom_sq;
-    const real_type inc_charge_sq;
     const real_type inv_beta_sq;
-    const ParticleId inc_id;
 
     // Target element quantities
     const ElementView element;
@@ -87,8 +85,8 @@ struct WokviStateHelper
     }
 
     // cos(theta) bounds for nuclear cross section
-    inline CELER_FUNCTION real_type cos_t_min_nuc() const;
-    inline CELER_FUNCTION real_type cos_t_max_nuc() const;
+    inline CELER_FUNCTION real_type cos_t_min_nuc() const { return 1.0; }
+    inline CELER_FUNCTION real_type cos_t_max_nuc() const { return -1.0; }
 
     // cos(theta) bounds for electron cross section
     inline CELER_FUNCTION real_type cos_t_min_elec() const;
@@ -105,18 +103,7 @@ struct WokviStateHelper
     // Calculated quantities
     real_type screen_z_;
     real_type cos_t_max_elec_;
-    real_type cos_t_min_nuc_;
-    real_type cos_t_max_nuc_;
-
-    // New quantities
-    real_type cut_;  // (0.0 < fixedCut) ? fixedCut : cutEnergy;
     real_type mott_factor_;
-
-    // Threshold for large incident mass behavior
-    inline CELER_FUNCTION bool large_incident_mass() const
-    {
-        return inc_mass > 1.0;
-    }
 
     // Computes the value of the screening coefficient
     inline CELER_FUNCTION real_type compute_screening_coefficient() const;
@@ -129,10 +116,6 @@ struct WokviStateHelper
     // Computes the maximum cos(theta) for scattering off electrons
     inline CELER_FUNCTION real_type
     compute_max_electron_cos_t(Energy cut_energy) const;
-
-    // Cosine of the maximum theta value, i.e.
-    // theta_max = pi, cos(theta_max) = -1
-    inline CELER_FUNCTION static real_type cos_t_max() { return -1.0; }
 };
 
 //---------------------------------------------------------------------------//
@@ -148,26 +131,6 @@ CELER_FUNCTION real_type momentum_from_kinetic_energy(real_type t,
 {
     return t * (t + 2.0 * mass);
 }
-
-/*!
- * Calculate the inverse a23 quantity for a material.
- * This is defined in Geant: G4IonisParamMat::ComputeIonParameters()
- */
-CELER_FUNCTION real_type compute_inv_a23(MaterialView const& material,
-                                         WokviRef const& data)
-{
-    real_type a23 = 0.0;
-    real_type norm = 0.0;  // norm should just be 1?
-
-    for (MatElementComponent const& component : material.elements())
-    {
-        a23 += component.fraction * data.elem_data[component.element].inv_a23;
-        norm += component.fraction;
-    }
-
-    return a23 / norm;
-}
-
 }  // namespace
 
 //---------------------------------------------------------------------------//
@@ -183,49 +146,20 @@ WokviStateHelper::WokviStateHelper(ParticleTrackView const& particle,
     : inc_energy(value_as<Energy>(particle.energy()))
     , inc_mass(value_as<Mass>(particle.mass()))
     , inc_mom_sq(value_as<MomentumSq>(particle.momentum_sq()))
-    , inc_charge_sq(ipow<2>(value_as<Charge>(particle.charge())))
     , inv_beta_sq(1.0 + ipow<2>(inc_mass) / inc_mom_sq)
-    , inc_id(particle.particle_id())
     , element(material.make_element_view(elcomp_id))
     , element_data(data.elem_data[material.element_id(elcomp_id)])
-    , kinetic_factor(data.coeff * element.atomic_number().get() * inc_charge_sq
+    , kinetic_factor(data.coeff * element.atomic_number().get() * ipow<2>(value_as<Charge>(particle.charge()))
                      * inv_beta_sq / inc_mom_sq)
     , data_(data)
-    , mott_factor_(1.0)
 {
     // Order of initialization doesn't matter
     screen_z_ = compute_screening_coefficient();
     cos_t_max_elec_ = compute_max_electron_cos_t(cut_energy);
 
-    // Bounds for nuclear cos(theta)
-    // TODO: Reference?
-    if (data.is_combined)
-    {
-        const real_type cos_t_min
-            = clamp(cos(data.polar_angle_limit), -1.0, 1.0);
-        cos_t_min_nuc_ = max(
-            cos_t_min,
-            1.0 - data.factor_A2 * compute_inv_a23(material, data) / inc_mom_sq);
-    }
-    else
-    {
-        cos_t_min_nuc_ = 1.0;
-    }
-    cos_t_max_nuc_ = WokviStateHelper::cos_t_max();
-
     // Mott factor for incident electron / positrons
     // TODO: Reference?
-    if (inc_id == data.ids.electron || inc_id == data.ids.positron)
-    {
-        mott_factor_ = 1.0 + 2.0e-4 * ipow<2>(target_Z());
-    }
-
-    // Proton-Proton correction
-    if (element.atomic_number().get() == 1 && inc_id == data.ids.proton)
-    {
-        cos_t_min_nuc_ = max(cos_t_min_nuc_, 0.0);
-        cos_t_max_nuc_ = max(cos_t_max_nuc_, 0.0);
-    }
+    mott_factor_ = 1.0 + 2.0e-4 * ipow<2>(target_Z());
 }
 
 //---------------------------------------------------------------------------//
@@ -273,44 +207,20 @@ CELER_FUNCTION real_type WokviStateHelper::cos_t_max_elec() const
 CELER_FUNCTION real_type
 WokviStateHelper::compute_max_electron_cos_t(Energy cut_energy) const
 {
-    if (large_incident_mass())
+    const real_type t_max = 0.5 * inc_energy;
+    const real_type t = min(value_as<Energy>(cut_energy), t_max);
+    const real_type t1 = inc_energy - t;
+    if (t1 > 0.0)
     {
-        const real_type ratio = data_.electron_mass / inc_mass;
-        const real_type tau = inc_energy / inc_mass;
-        const real_type t_max
-            = 2.0 * data_.electron_mass * tau * (tau + 2.0)
-              / (1.0 + 2.0 * ratio * (tau + 1.0) + ratio * ratio);
-        return 1.0
-               - min(value_as<Energy>(cut_energy), t_max) * data_.electron_mass
-                     / inc_mom_sq;
+        const real_type mom1_sq
+            = momentum_from_kinetic_energy(t, data_.electron_mass);
+        const real_type mom2_sq
+            = momentum_from_kinetic_energy(t1, data_.electron_mass);
+        const real_type ctm = (inc_mom_sq + mom2_sq - mom1_sq) * 0.5
+                              / sqrt(inc_mom_sq * mom2_sq);
+        return clamp(ctm, 0.0, 1.0);
     }
-    else
-    {
-        bool const is_electron = inc_id == data_.ids.electron
-                                 || inc_id == data_.ids.positron;
-        const real_type t_max = is_electron ? 0.5 * inc_energy : inc_energy;
-        const real_type t = min(value_as<Energy>(cut_energy), t_max);
-        const real_type t1 = inc_energy - t;
-        if (t1 > 0.0)
-        {
-            const real_type mom1_sq
-                = momentum_from_kinetic_energy(t, data_.electron_mass);
-            const real_type mom2_sq
-                = momentum_from_kinetic_energy(t1, data_.electron_mass);
-            const real_type ctm = (inc_mom_sq + mom2_sq - mom1_sq) * 0.5
-                                  / sqrt(inc_mom_sq * mom2_sq);
-            real_type cos_t_max_elec = 1.0;
-            if (ctm < 1.0)
-            {
-                cos_t_max_elec = ctm;
-            }
-            if (is_electron)
-            {
-                cos_t_max_elec = max(cos_t_max_elec, 0.0);
-            }
-            return cos_t_max_elec;
-        }
-    }
+
     // Default value
     return 1.0;
 }
@@ -341,12 +251,6 @@ CELER_FUNCTION real_type WokviStateHelper::compute_screening_coefficient() const
     {
         // TODO: Reference for just proton?
         return element_data.screen_r_sq / inc_mom_sq;
-    }
-    else if (large_incident_mass())
-    {
-        // [PRM 8.22]
-        return screening_scaling_function(inc_charge_sq)
-               * element_data.screen_r_sq / inc_mom_sq;
     }
     else
     {
