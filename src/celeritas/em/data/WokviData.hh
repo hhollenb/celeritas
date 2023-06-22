@@ -15,7 +15,9 @@
 namespace celeritas
 {
 //---------------------------------------------------------------------------//
-
+/*!
+ * Particle and action ids used by WokviModel
+ */
 struct WokviIds
 {
     ActionId action;
@@ -29,15 +31,29 @@ struct WokviIds
     }
 };
 
+//---------------------------------------------------------------------------//
+/*!
+ * Per-element data used by the WokviModel
+ */
 struct WokviElementData
 {
+    // Squared screening radius
     real_type screen_r_sq;
+
+    // Squared screening radius for electrons
     real_type screen_r_sq_elec;
+
+    // Nuclear form factor
     real_type form_factor;
 
+    // Matrix of Mott coefficients
     real_type mott_coeff[5][6];
 };
 
+//---------------------------------------------------------------------------//
+/*!
+ * Supported models of nuclear form factors
+ */
 enum class NuclearFormFactorType
 {
     None,
@@ -46,6 +62,10 @@ enum class NuclearFormFactorType
     Gaussian
 };
 
+//---------------------------------------------------------------------------//
+/*!
+ * Constant shared data used by the WokviModel
+ */
 template<Ownership W, MemSpace M>
 struct WokviData
 {
@@ -58,16 +78,22 @@ struct WokviData
     // Per element form factors
     ElementItems<WokviElementData> elem_data;
 
-    // Other parameters
-    real_type coeff;  // 2 pi (e_mass * e_radius)^2
+    // 2 pi (e_mass * e_radius)^2
+    real_type coeff;
+
+    // Mass of the electron
     real_type electron_mass;
+
+    // Model for the form factor to use
     NuclearFormFactorType form_factor_type;
 
+    // Check if the data is initialized
     explicit CELER_FUNCTION operator bool() const
     {
         return ids && !elem_data.empty();
     }
 
+    // Copy initialize from an existing WokviData
     template<Ownership W2, MemSpace M2>
     WokviData& operator=(WokviData<W2, M2> const& other)
     {
