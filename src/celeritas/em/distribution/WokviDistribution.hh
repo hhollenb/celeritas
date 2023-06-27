@@ -32,6 +32,8 @@ namespace celeritas
 class WokviDistribution
 {
   public:
+    using MomentumSq = units::MevMomentumSq;
+
   public:
     // Construct with state and date from WokviInteractor
     inline CELER_FUNCTION
@@ -52,7 +54,7 @@ class WokviDistribution
     detail::WokviStateHelper const& state_;
 
     // Shared WokviModel data
-    WovkiRef const& data_;
+    WokviRef const& data_;
 
     // Nuclear form factor
     const real_type form_factor_A_;
@@ -63,8 +65,8 @@ class WokviDistribution
     // Sum of electron and nuclear cross sections
     real_type total_cross_section_;
 
-    inline CELER_FUNCTION real_type form_factor(real_type formf,
-                                                real_type z1) const;
+    inline CELER_FUNCTION real_type calculate_form_factor(real_type formf,
+                                                          real_type z1) const;
     inline CELER_FUNCTION real_type flat_form_factor(real_type x) const;
 };
 
@@ -81,8 +83,10 @@ WokviDistribution::WokviDistribution(detail::WokviStateHelper const& state,
                                      WokviRef const& data)
     : state_(state)
     , data_(data)
-    , form_factor_A_(state.element_data.form_factor
-                     * state.inc_mom_sq)  // TODO: Reference?
+    , form_factor_A_(state.inc_mom_sq
+                     / value_as<MomentumSq>(
+                         state.element_data.form_momentum_scale))  // TODO:
+                                                                   // Reference?
 {
     // Calculate cross sections
     const WokviXsCalculator xsec(state);
@@ -145,8 +149,8 @@ CELER_FUNCTION Real3 WokviDistribution::operator()(Engine& rng) const
     // Calculate rejection
     // TODO: Reference?
     MottXsCalculator mott_xsec(state_);
-    const real_type fm = form_factor(form_factor, z1);
-    const real_type grej = mott_xsec(sqrt(z1)) * ipow<2>(fm);
+    const real_type fm = calculate_form_factor(form_factor, z1);
+    const real_type g_rej = mott_xsec(sqrt(z1)) * ipow<2>(fm);
 
     if (sample(rng) > g_rej)
     {
@@ -165,13 +169,14 @@ CELER_FUNCTION Real3 WokviDistribution::operator()(Engine& rng) const
  * Calculates the form factor based on the form factor model.
  * TODO: Reference?
  */
-CELER_FUNCTION real_type WokviDistribution::form_factor(real_type formf,
-                                                        real_type z1) const
+CELER_FUNCTION real_type
+WokviDistribution::calculate_form_factor(real_type formf, real_type z1) const
 {
     switch (data_.form_factor_type)
     {
         case NuclearFormFactorType::Flat: {
-            const real_type ccoef = 0.00508 / CLHEP::MeV;
+            // In units MeV
+            const real_type ccoef = 0.00508;
             const real_type x = sqrt(2.0 * state_.inc_mom_sq * z1) * ccoef
                                 * 2.0;
             return flat_form_factor(x)

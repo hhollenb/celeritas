@@ -85,8 +85,8 @@ struct WokviStateHelper
     }
 
     // cos(theta) bounds for nuclear cross section
-    inline CELER_FUNCTION real_type cos_t_min_nuc() const { return 1.0; }
-    inline CELER_FUNCTION real_type cos_t_max_nuc() const { return -1.0; }
+    inline CELER_FUNCTION real_type cos_t_min_nuc() const;
+    inline CELER_FUNCTION real_type cos_t_max_nuc() const;
 
     // cos(theta) bounds for electron cross section
     inline CELER_FUNCTION real_type cos_t_min_elec() const;
@@ -149,7 +149,9 @@ WokviStateHelper::WokviStateHelper(ParticleTrackView const& particle,
     , inv_beta_sq(1.0 + ipow<2>(inc_mass) / inc_mom_sq)
     , element(material.make_element_view(elcomp_id))
     , element_data(data.elem_data[material.element_id(elcomp_id)])
-    , kinetic_factor(data.coeff * element.atomic_number().get() * ipow<2>(value_as<Charge>(particle.charge()))
+    , kinetic_factor(value_as<CoeffQuantity>(data.coeff)
+                     * element.atomic_number().get()
+                     * ipow<2>(value_as<Charge>(particle.charge()))
                      * inv_beta_sq / inc_mom_sq)
     , data_(data)
 {
@@ -168,7 +170,7 @@ WokviStateHelper::WokviStateHelper(ParticleTrackView const& particle,
  */
 CELER_FUNCTION real_type WokviStateHelper::cos_t_min_nuc() const
 {
-    return cos_t_min_nuc_;
+    return 1.0;
 }
 
 //---------------------------------------------------------------------------//
@@ -177,7 +179,7 @@ CELER_FUNCTION real_type WokviStateHelper::cos_t_min_nuc() const
  */
 CELER_FUNCTION real_type WokviStateHelper::cos_t_max_nuc() const
 {
-    return cos_t_max_nuc_;
+    return -1.0;
 }
 
 //---------------------------------------------------------------------------//
@@ -212,10 +214,10 @@ WokviStateHelper::compute_max_electron_cos_t(Energy cut_energy) const
     const real_type t1 = inc_energy - t;
     if (t1 > 0.0)
     {
-        const real_type mom1_sq
-            = momentum_from_kinetic_energy(t, data_.electron_mass);
-        const real_type mom2_sq
-            = momentum_from_kinetic_energy(t1, data_.electron_mass);
+        const real_type mom1_sq = momentum_from_kinetic_energy(
+            t, value_as<Mass>(data_.electron_mass));
+        const real_type mom2_sq = momentum_from_kinetic_energy(
+            t1, value_as<Mass>(data_.electron_mass));
         const real_type ctm = (inc_mom_sq + mom2_sq - mom1_sq) * 0.5
                               / sqrt(inc_mom_sq * mom2_sq);
         return clamp(ctm, 0.0, 1.0);
@@ -238,7 +240,7 @@ WokviStateHelper::screening_scaling_function(real_type factor) const
     return min(target_Z() * 1.13,
                1.13
                    + 3.76 * ipow<2>(target_Z()) * inv_beta_sq
-                         * celeritas::constants::alpha_fine_structure * factor);
+                         * constants::alpha_fine_structure * factor);
 }
 
 //---------------------------------------------------------------------------//
@@ -247,19 +249,17 @@ WokviStateHelper::screening_scaling_function(real_type factor) const
  */
 CELER_FUNCTION real_type WokviStateHelper::compute_screening_coefficient() const
 {
-    if (element.atomic_number().get() == 1)
+    // TODO: Reference for just proton correction?
+    real_type correction = 1.0;
+    if (element.atomic_number().get() > 1)
     {
-        // TODO: Reference for just proton?
-        return element_data.screen_r_sq / inc_mom_sq;
-    }
-    else
-    {
-        // TODO: Reference to electron correction to screening coefficient?
         const real_type tau = inc_energy / inc_mass;
-        return screening_scaling_function(
-                   sqrt(tau / (tau + ipow<2>(element.cbrt_z()))))
-               * element_data.screen_r_sq_elec / inc_mom_sq;
+        correction = screening_scaling_function(
+            sqrt(tau / (tau + ipow<2>(element.cbrt_z()))));
     }
+
+    return correction * value_as<MomentumSq>(element_data.screen_r_sq_elec)
+           / inc_mom_sq;
 }
 
 //---------------------------------------------------------------------------//
