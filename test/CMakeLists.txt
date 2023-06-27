@@ -123,7 +123,16 @@ celeritas_add_test(TestMacros.test.cc)
 # CORECEL TESTS
 #-----------------------------------------------------------------------------#
 
-celeritas_setup_tests(SERIAL PREFIX corecel)
+celeritas_add_library(testcel_core
+  corecel/ScopedLogStorer.cc
+)
+celeritas_target_link_libraries(testcel_core
+  PRIVATE Celeritas::testcel_harness Celeritas::corecel
+)
+
+celeritas_setup_tests(SERIAL PREFIX corecel
+  LINK_LIBRARIES testcel_core Celeritas::corecel
+)
 
 celeritas_add_test(corecel/OpaqueId.test.cc)
 
@@ -287,7 +296,7 @@ celeritas_target_link_libraries(testcel_celeritas
 )
 
 celeritas_setup_tests(SERIAL PREFIX celeritas
-  LINK_LIBRARIES testcel_celeritas Celeritas::celeritas
+  LINK_LIBRARIES testcel_celeritas testcel_core Celeritas::celeritas
 )
 
 #-----------------------------------------------------------------------------#
@@ -318,12 +327,29 @@ celeritas_add_test(celeritas/em/UrbanMsc.test.cc ${_needs_root}
 set(CELERITASTEST_PREFIX celeritas/ext)
 
 if(CELERITAS_USE_VecGeom)
+  # Vecgeom uses global counters that interfere with copying data to GPU and
+  # change the internal numbering.
+  if(CELERITAS_USE_Geant4)
+    set(_vecgeom_geant_tests
+      "FourLevelsGeantTest.*"
+      "SolidsGeantTest.*"
+    )
+  else()
+    set(_vecgeom_geant_tests)
+  endif()
   celeritas_add_device_test(celeritas/ext/Vecgeom
     LINK_LIBRARIES VecGeom::vecgeom
+    FILTER
+      "FourLevelsTest.*"
+      "SolidsTest.*"
+      ${_vecgeom_geant_tests}
   )
 endif()
 if(CELERITAS_USE_Geant4)
   celeritas_add_test(celeritas/ext/GeantGeo.test.cc
+    LINK_LIBRARIES ${Geant4_LIBRARIES}
+  )
+  celeritas_add_test(celeritas/ext/GeantGeoUtils.test.cc
     LINK_LIBRARIES ${Geant4_LIBRARIES}
   )
 endif()
@@ -352,7 +378,7 @@ celeritas_add_test(celeritas/field/FieldDriver.test.cc)
 celeritas_add_test(celeritas/field/FieldPropagator.test.cc
   ${_needs_geo} LINK_LIBRARIES ${_core_geo_lib})
 celeritas_add_test(celeritas/field/LinearPropagator.test.cc
-  ${_needs_geo} LINK_LIBRARIES  ${_core_geo_lib})
+  ${_needs_geo} LINK_LIBRARIES ${_geo_libs})
 celeritas_add_test(celeritas/field/MagFieldEquation.test.cc)
 
 #-------------------------------------#
