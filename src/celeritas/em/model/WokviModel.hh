@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2020-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2023-2023 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -66,6 +66,9 @@ class WokviModel final : public Model
   private:
     CollectionMirror<WokviData> data_;
     ImportedModelAdapter imported_;
+
+    void
+    build_data(HostVal<WokviData>& host_data, MaterialParams const& materials);
 };
 
 //---------------------------------------------------------------------------//

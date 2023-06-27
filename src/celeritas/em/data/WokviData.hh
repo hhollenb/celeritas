@@ -10,6 +10,7 @@
 #include "corecel/Macros.hh"
 #include "corecel/Types.hh"
 #include "corecel/data/Collection.hh"
+#include "celeritas/Quantities.hh"
 #include "celeritas/Types.hh"
 
 namespace celeritas
@@ -23,11 +24,10 @@ struct WokviIds
     ActionId action;
     ParticleId electron;
     ParticleId positron;
-    ParticleId proton;
 
     explicit CELER_FUNCTION operator bool() const
     {
-        return action && electron && positron && proton;
+        return action && electron && positron;
     }
 };
 
@@ -37,14 +37,13 @@ struct WokviIds
  */
 struct WokviElementData
 {
-    // Squared screening radius
-    real_type screen_r_sq;
+    using MomentumSq = units::MevMomentumSq;
 
-    // Squared screening radius for electrons
-    real_type screen_r_sq_elec;
+    // Squared screening radius for incident electrons
+    MomentumSq screen_r_sq_elec;
 
-    // Nuclear form factor
-    real_type form_factor;
+    // Nuclear form factor momentum scale
+    MomentumSq form_momentum_scale;
 
     // Matrix of Mott coefficients
     real_type mott_coeff[5][6];
@@ -62,6 +61,10 @@ enum class NuclearFormFactorType
     Gaussian
 };
 
+using CoeffQuantity
+    = Quantity<UnitProduct<UnitProduct<units::MevPerCsq, units::MevPerCsq>,
+                           units::Millibarn>>;
+
 //---------------------------------------------------------------------------//
 /*!
  * Constant shared data used by the WokviModel
@@ -69,6 +72,8 @@ enum class NuclearFormFactorType
 template<Ownership W, MemSpace M>
 struct WokviData
 {
+    using Mass = units::MevMass;
+
     template<class T>
     using ElementItems = celeritas::Collection<T, W, M, ElementId>;
 
@@ -79,10 +84,10 @@ struct WokviData
     ElementItems<WokviElementData> elem_data;
 
     // 2 pi (e_mass * e_radius)^2
-    real_type coeff;
+    CoeffQuantity coeff;
 
     // Mass of the electron
-    real_type electron_mass;
+    Mass electron_mass;
 
     // Model for the form factor to use
     NuclearFormFactorType form_factor_type;
@@ -100,12 +105,8 @@ struct WokviData
         CELER_EXPECT(other);
         ids = other.ids;
         elem_data = other.elem_data;
-        factor_A2 = other.factor_A2;
-        factor_B1 = other.factor_B1;
         coeff = other.coeff;
         electron_mass = other.electron_mass;
-        is_combined = other.is_combined;
-        polar_angle_limit = other.polar_angle_limit;
         form_factor_type = other.form_factor_type;
         return *this;
     }

@@ -46,33 +46,38 @@ MottXsCalculator::MottXsCalculator(detail::WokviStateHelper const& state)
 //---------------------------------------------------------------------------//
 /*!
  * Compute the ratio of Mott to Rutherford cross sections.
+ *
  * The parameter fcos_t is equivalent to
  *      sqrt(1 - cos(theta))
  * where theta is the scattered angle in the z-aligned momentum frame.
- * TODO: Reference?
+ *
+ * For 1 <= Z <= 92, an interpolated expression is used [PRM 8.48].
  */
 CELER_FUNCTION
 real_type MottXsCalculator::operator()(real_type fcos_t) const
 {
     real_type ratio = 0;
-    const real_type shift = 0.7181228;
-    const real_type beta0 = sqrt(1.0 / state_.inv_beta_sq) - shift;
+    // Mean velocity of electrons between ~KeV and 900 MeV
+    const real_type beta_shift = 0.7181228;
+    const real_type beta0 = sqrt(1.0 / state_.inv_beta_sq) - beta_shift;
 
     // Construct [0,5] powers of beta0
-    real_type b0 = 1.0;
     real_type b[6];
-    for (int i = 0; i < 6; i++) {
-        b[i] = b0;
-        b0 *= beta0;
+    b[0] = 1.0;
+    for (int i = 1; i < 6; i++)
+    {
+        b[i] = beta0 * b[i - 1];
     }
 
-    // Compute the ratio
+    // Compute the ratio, summing over powers of fcos_t
     real_type f0 = 1.0;
     for (int j = 0; j <= 4; j++) {
+        // Calculate the a_j coefficient
         real_type a = 0.0;
         for (int k = 0; k < 6; k++) {
             a += state_.element_data.mott_coeff[j][k] * b[k];
         }
+        // Sum in power series of fcos_t
         ratio += a * f0;
         f0 *= fcos_t;
     }
