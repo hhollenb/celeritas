@@ -83,10 +83,8 @@ WokviDistribution::WokviDistribution(detail::WokviStateHelper const& state,
                                      WokviRef const& data)
     : state_(state)
     , data_(data)
-    , form_factor_A_(state.inc_mom_sq
-                     / value_as<MomentumSq>(
-                         state.element_data.form_momentum_scale))  // TODO:
-                                                                   // Reference?
+    , form_factor_A_(state.form_factor_A())  // TODO:
+                                             // Reference?
 {
     // Calculate cross sections
     const WokviXsCalculator xsec(state);

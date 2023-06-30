@@ -57,12 +57,29 @@ WokviModel::WokviModel(ActionId id,
     host_data.electron_mass = particles.get(host_data.ids.electron).mass();
 
     // Calculate coefficient
-    host_data.coeff = native_value_to<CoeffQuantity>(
+    // 2 pi (m_e * r_e * c)
+    host_data.coeff = native_value_to<WokviRef::CoeffQuantity>(
         2.0 * constants::pi
-        * ipow<2>(constants::electron_mass * constants::r_electron));
+        * ipow<2>(constants::electron_mass * constants::r_electron
+                  * constants::c_light));
 
     // TODO: Select form factor
     host_data.form_factor_type = NuclearFormFactorType::Exponential;
+
+    // Prefactor of the screen R squared
+    // const real_type fact = 1.0;  // TODO:
+    // G4EmParameters::Instance()->ScreeningFactor();
+
+    // Thomas-Fermi constant C_TF
+    const real_type ctf = 0.5 * fastpow(3.0 * constants::pi / 4.0, 2.0 / 3.0);
+    host_data.screen_r_sq_elec = native_value_to<units::MevMomentumSq>(
+        0.5 * ipow<2>(constants::hbar_planck / (ctf * constants::a0_bohr)));
+
+    // This is the inverse of Geant's constn
+    // need to multiply by 2 to match Geant's magic number
+    host_data.form_momentum_scale = native_value_to<units::MevMomentumSq>(
+        12.0 / ipow<2>(1.27 * (1e-15 * units::meter) / constants::hbar_planck)
+        / 2.0);
 
     build_data(host_data, materials);
 
@@ -117,8 +134,6 @@ ActionId WokviModel::action_id() const
 void WokviModel::build_data(HostVal<WokviData>& host_data,
                             MaterialParams const& materials)
 {
-    using MomentumSq = WokviElementData::MomentumSq;
-
     // Build element data (?)
     unsigned int const num_elements = materials.num_elements();
     auto elem_data = make_builder(&host_data.elem_data);
@@ -130,45 +145,12 @@ void WokviModel::build_data(HostVal<WokviData>& host_data,
     // Numerical factor in the form factor (units (MeV/c)^-2)
     // const real_type constn = 6.937e-6; // magic number?
 
-    // This is the inverse of Geant's constn
-    // need to multiply by 2 to match Geant's magic number
-    auto const constn = native_value_to<MomentumSq>(
-        2.0 * 12.0
-        / ipow<2>(1.27 * (1e-15 * units::meter)
-                  / (constants::hbar_planck * constants::c_light)));
-
-    const real_type fact
-        = 1.0;  // TODO: G4EmParameters::Instance()->ScreeningFactor();
-
-    // Thomas-Fermi constant C_TF
-    const real_type ctf = 0.5 * fastpow(3.0 * constants::pi / 4.0, 2.0 / 3.0);
-
-    // Prefactor of the screen R squared
-    auto const afact = native_value_to<MomentumSq>(
-        0.5 * fact
-        * ipow<2>(constants::hbar_planck / (ctf * constants::a0_bohr)));
-
     for (auto el_id : range(ElementId{num_elements}))
     {
         ElementView const& element = materials.get(el_id);
         const AtomicNumber z = element.atomic_number();
 
         WokviElementData z_data;
-
-        z_data.screen_r_sq_elec = afact * ipow<2>(element.cbrt_z());
-        if (z.get() == 1)
-        {
-            // TODO: reference?
-            z_data.form_momentum_scale
-                = native_value_to<MomentumSq>(3.097e-6);  // magic number?
-        }
-        else
-        {
-            z_data.form_momentum_scale
-                = constn
-                  / fastpow(value_as<units::AmuMass>(element.atomic_mass()),
-                            2.0 * 0.27);
-        }
 
         // Load Mott coefficients
         // Currently only support up to Z=92 (Uranium) as taken from Geant4

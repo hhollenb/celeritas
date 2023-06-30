@@ -37,14 +37,6 @@ struct WokviIds
  */
 struct WokviElementData
 {
-    using MomentumSq = units::MevMomentumSq;
-
-    // Squared screening radius for incident electrons
-    MomentumSq screen_r_sq_elec;
-
-    // Nuclear form factor momentum scale
-    MomentumSq form_momentum_scale;
-
     // Matrix of Mott coefficients
     real_type mott_coeff[5][6];
 };
@@ -61,10 +53,6 @@ enum class NuclearFormFactorType
     Gaussian
 };
 
-using CoeffQuantity
-    = Quantity<UnitProduct<UnitProduct<units::MevPerCsq, units::MevPerCsq>,
-                           units::Millibarn>>;
-
 //---------------------------------------------------------------------------//
 /*!
  * Constant shared data used by the WokviModel
@@ -73,6 +61,9 @@ template<Ownership W, MemSpace M>
 struct WokviData
 {
     using Mass = units::MevMass;
+    using MomentumSq = units::MevMomentumSq;
+    using CoeffQuantity
+        = Quantity<UnitProduct<MomentumSq::unit_type, units::Millibarn>>;
 
     template<class T>
     using ElementItems = celeritas::Collection<T, W, M, ElementId>;
@@ -83,11 +74,17 @@ struct WokviData
     // Per element form factors
     ElementItems<WokviElementData> elem_data;
 
-    // 2 pi (e_mass * e_radius)^2
+    // Constant coefficient in kinematic factor
     CoeffQuantity coeff;
 
     // Mass of the electron
     Mass electron_mass;
+
+    // Squared screening radius for incident electrons
+    MomentumSq screen_r_sq_elec;
+
+    // Nuclear form factor momentum scale
+    MomentumSq form_momentum_scale;
 
     // Model for the form factor to use
     NuclearFormFactorType form_factor_type;
@@ -108,6 +105,8 @@ struct WokviData
         coeff = other.coeff;
         electron_mass = other.electron_mass;
         form_factor_type = other.form_factor_type;
+        screen_r_sq_elec = other.screen_r_sq_elec;
+        form_momentum_scale = other.form_momentum_scale;
         return *this;
     }
 };
