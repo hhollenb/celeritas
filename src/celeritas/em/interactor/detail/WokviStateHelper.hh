@@ -57,6 +57,7 @@ struct WokviStateHelper
     {
         return element.atomic_number().get();
     }
+
     // TODO: AmuMass or MevMass?
     inline CELER_FUNCTION real_type target_mass() const
     {
@@ -95,6 +96,8 @@ struct WokviStateHelper
     // Helper function for a common used expression
     //      w = 1 + 2A - cos_t
     inline CELER_FUNCTION real_type w_term(real_type cos_t) const;
+
+    inline CELER_FUNCTION real_type form_factor_A() const;
 
   private:
     // Constat model data
@@ -149,7 +152,7 @@ WokviStateHelper::WokviStateHelper(ParticleTrackView const& particle,
     , inv_beta_sq(1.0 + ipow<2>(inc_mass) / inc_mom_sq)
     , element(material.make_element_view(elcomp_id))
     , element_data(data.elem_data[material.element_id(elcomp_id)])
-    , kinetic_factor(value_as<CoeffQuantity>(data.coeff)
+    , kinetic_factor(value_as<WokviRef::CoeffQuantity>(data.coeff)
                      * element.atomic_number().get()
                      * ipow<2>(value_as<Charge>(particle.charge()))
                      * inv_beta_sq / inc_mom_sq)
@@ -258,8 +261,8 @@ CELER_FUNCTION real_type WokviStateHelper::compute_screening_coefficient() const
             sqrt(tau / (tau + ipow<2>(element.cbrt_z()))));
     }
 
-    return correction * value_as<MomentumSq>(element_data.screen_r_sq_elec)
-           / inc_mom_sq;
+    return correction * value_as<MomentumSq>(data_.screen_r_sq_elec)
+           * ipow<2>(element.cbrt_z()) / inc_mom_sq;
 }
 
 //---------------------------------------------------------------------------//
@@ -271,6 +274,16 @@ CELER_FUNCTION real_type WokviStateHelper::compute_screening_coefficient() const
 CELER_FUNCTION real_type WokviStateHelper::w_term(real_type cos_t) const
 {
     return 1.0 + screen_z_ - cos_t;
+}
+
+//---------------------------------------------------------------------------//
+CELER_FUNCTION real_type WokviStateHelper::form_factor_A() const
+{
+    const real_type scale
+        = (element.atomic_number().get() == 1)
+              ? 3.097e-6
+              : value_as<MomentumSq>(data_.form_momentum_scale);
+    return inc_mom_sq * fastpow(target_mass(), 2.0 * 0.27) / scale;
 }
 
 //---------------------------------------------------------------------------//
