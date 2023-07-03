@@ -9,7 +9,7 @@
 
 #include "corecel/Macros.hh"
 #include "corecel/Types.hh"
-#include "celeritas/em/interactor/detail/WokviStateHelper.hh"
+#include "celeritas/em/data/WokviData.hh"
 
 namespace celeritas
 {
@@ -22,13 +22,14 @@ class MottXsCalculator
   public:
     // Construct with state data
     inline CELER_FUNCTION
-    MottXsCalculator(detail::WokviStateHelper const& state);
+    MottXsCalculator(WokviElementData const& element_data, real_type beta);
 
     // Ratio of Mott and Rutherford cross sections
     inline CELER_FUNCTION real_type operator()(real_type fcos_t) const;
 
   private:
-    detail::WokviStateHelper const& state_;
+    WokviElementData const& element_data_;
+    real_type beta_;
 };
 
 //---------------------------------------------------------------------------//
@@ -38,28 +39,33 @@ class MottXsCalculator
  * Construct with state data
  */
 CELER_FUNCTION
-MottXsCalculator::MottXsCalculator(detail::WokviStateHelper const& state)
-    : state_(state)
+MottXsCalculator::MottXsCalculator(WokviElementData const& element_data,
+                                   real_type inc_energy,
+                                   real_type inc_mass)
+    : element_data_(element_data)
 {
+    real_type const inc_mom = sqrt(inc_energy * (inc_energy + 2 * inc_mass));
+    beta_ = inc_mom / (inc_energy + inc_mass);
+    CELER_EXPECT(beta_ < 1);
 }
 
 //---------------------------------------------------------------------------//
 /*!
  * Compute the ratio of Mott to Rutherford cross sections.
  *
- * The parameter fcos_t is equivalent to
- *      sqrt(1 - cos(theta))
- * where theta is the scattered angle in the z-aligned momentum frame.
+ * The parameter cos_theta is the cosine of the
+ * scattered angle in the z-aligned momentum frame.
  *
  * For 1 <= Z <= 92, an interpolated expression is used [PRM 8.48].
  */
 CELER_FUNCTION
-real_type MottXsCalculator::operator()(real_type fcos_t) const
+real_type MottXsCalculator::operator()(real_type cos_theta) const
 {
-    real_type ratio = 0;
+    const real_type fcos_t = sqrt(1 - cos_theta);
+
     // Mean velocity of electrons between ~KeV and 900 MeV
     const real_type beta_shift = 0.7181228;
-    const real_type beta0 = sqrt(1.0 / state_.inv_beta_sq) - beta_shift;
+    const real_type beta0 = beta_ - beta_shift;
 
     // Construct [0,5] powers of beta0
     real_type b[6];
@@ -71,11 +77,12 @@ real_type MottXsCalculator::operator()(real_type fcos_t) const
 
     // Compute the ratio, summing over powers of fcos_t
     real_type f0 = 1.0;
+    real_type ratio = 0;
     for (int j = 0; j <= 4; j++) {
         // Calculate the a_j coefficient
         real_type a = 0.0;
-        for (int k = 0; k < 6; k++) {
-            a += state_.element_data.mott_coeff[j][k] * b[k];
+        for (int k = 0; k <= 5; k++) {
+            a += element_data_.mott_coeff[j][k] * b[k];
         }
         // Sum in power series of fcos_t
         ratio += a * f0;

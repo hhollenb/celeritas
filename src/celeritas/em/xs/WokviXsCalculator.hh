@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2021-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2023-2023 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -21,20 +21,21 @@ namespace celeritas
 class WokviXsCalculator
 {
   public:
-    // Construct with state data
+    // Construct the calculator from the given values
     inline CELER_FUNCTION
-    WokviXsCalculator(detail::WokviStateHelper const& state);
+    WokviXsCalculator(AtomicNumber const& target_z, real_type screening_coefficient, real_type cos_t_max_elec);
+
+    // The ratio of electron to total cross section for Coulomb scattering
+    inline CELER_FUNCTION real_type operator()() const;
+
+  private:
+    AtomicNumber const& target_z_;
+    real_type const screening_coefficient_;
+    real_type const cos_t_max_elec_;
 
     // Cross sections
     inline CELER_FUNCTION real_type nuclear_xsec() const;
     inline CELER_FUNCTION real_type electron_xsec() const;
-
-  private:
-    detail::WokviStateHelper const& state_;
-
-    // Functional form of the integrated Wentzel OK and VI cross section
-    inline CELER_FUNCTION real_type wokvi_xs(real_type cos_t_min,
-                                             real_type cos_t_max) const;
 };
 
 //---------------------------------------------------------------------------//
@@ -44,19 +45,41 @@ class WokviXsCalculator
  * Construct with state data
  */
 CELER_FUNCTION
-WokviXsCalculator::WokviXsCalculator(detail::WokviStateHelper const& state)
-    : state_(state)
+WokviXsCalculator::WokviXsCalculator(
+    AtomicNumber const& target_z,
+    real_type screening_coefficient,
+    real_type cos_t_max_elec)
+    : target_z_(target_z)
+    , screening_coefficient_(screening_coefficient)
+    , cos_t_max_elec_(cos_t_max_elec)
 {
+    CELER_EXPECT(screening_coefficient > 0)
+    CELER_EXPECT(cos_t_max_elec >= -1 && cos_t_max_elec <= 1)
+}
+
+
+//---------------------------------------------------------------------------//
+/*!
+ * Ratio of electron cross section to the total (nuclear + electron)
+ * cross section.
+ */
+CELER_FUNCTION real_type WokviXsCalculator::operator() const
+{
+    const real_type nuc_xsec = nuclear_xsec();
+    const real_type elec_xsec = electron_xsec();
+
+    return elec_xsec / (nuc_xsec + elec_xsec);
 }
 
 //---------------------------------------------------------------------------//
 /*!
- * Integrated nuclear cross section
+ * Reduced integrated nuclear cross section from theta=0 to pi.
+ * Since this is only used in the electric ratio, mutual factors with the
+ * electron cross section are dropped.
  */
 CELER_FUNCTION real_type WokviXsCalculator::nuclear_xsec() const
 {
-    return state_.target_Z()
-           * wokvi_xs(state_.cos_t_min_nuc(), state_.cos_t_max_nuc());
+    return target_z_.get() / (1 + screening_coefficient_);
 }
 
 //---------------------------------------------------------------------------//
@@ -65,23 +88,7 @@ CELER_FUNCTION real_type WokviXsCalculator::nuclear_xsec() const
  */
 CELER_FUNCTION real_type WokviXsCalculator::electron_xsec() const
 {
-    return wokvi_xs(state_.cos_t_min_elec(), state_.cos_t_max_elec());
-}
-
-//---------------------------------------------------------------------------//
-/*!
- * Integrated cross section based on the Wentzel OK and VI model [PRM 8.16]
- */
-CELER_FUNCTION real_type WokviXsCalculator::wokvi_xs(real_type cos_t_min,
-                                                     real_type cos_t_max) const
-{
-    if (cos_t_max < cos_t_min)
-    {
-        const real_type w1 = state_.w_term(cos_t_min);
-        const real_type w2 = state_.w_term(cos_t_max);
-        return state_.kinetic_factor * state_.mott_factor() * (w2 - w1) / (w1 * w2);
-    }
-    return 0.0;
+    return (1 - cos_t_max_elec_) / (1 - cos_t_max_elec_ + screening_coefficient_);
 }
 
 //---------------------------------------------------------------------------//
