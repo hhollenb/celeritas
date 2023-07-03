@@ -241,7 +241,6 @@ CELER_FUNCTION real_type WokviDistribution::compute_max_electron_cos_t() const
 
     // Default value
     return 1.0;
-
 }
 
 
