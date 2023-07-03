@@ -37,37 +37,41 @@ class WokviDistribution
   public:
     // Construct with state and date from WokviInteractor
     inline CELER_FUNCTION
-    WokviDistribution(detail::WokviStateHelper const& state,
+    WokviDistribution(ParticleTrackView const& particle,
+                      ElementView const& target_element,
+                      WokviElementData const& element_data,
                       WokviRef const& data);
 
     // Sample the scattering direction
     template<class Engine>
     inline CELER_FUNCTION Real3 operator()(Engine& rng) const;
 
-    // The total cross section
-    inline CELER_FUNCTION real_type cross_section() const;
-
   private:
     //// DATA ////
-
-    // Precomputed variables for the interaction
-    detail::WokviStateHelper const& state_;
 
     // Shared WokviModel data
     WokviRef const& data_;
 
-    // Nuclear form factor
-    const real_type form_factor_A_;
+    // Target element
+    IsotopeView const& target_;
+    WokviElementData const& element_data_;
 
-    // Ratio of electron to total cross section
-    real_type elec_ratio_;
+    // Incident particle data
+    real_type const inc_energy_;
+    real_type const inc_mass_;
 
-    // Sum of electron and nuclear cross sections
-    real_type total_cross_section_;
 
     inline CELER_FUNCTION real_type calculate_form_factor(real_type formf,
-                                                          real_type z1) const;
+                                                          real_type cos_t) const;
     inline CELER_FUNCTION real_type flat_form_factor(real_type x) const;
+};
+
+namespace
+{
+CELER_FUNCITON real_type calc_mom_sq(real_type energy, real_type mass)
+{
+    return energy * (energy + 2 * mass);
+}
 };
 
 //---------------------------------------------------------------------------//
@@ -79,34 +83,16 @@ class WokviDistribution
  * TODO: Reference for factors?
  */
 CELER_FUNCTION
-WokviDistribution::WokviDistribution(detail::WokviStateHelper const& state,
+WokviDistribution::WokviDistribution(ParticleTrackView const& particle,
+                                     IsotopeView const& target,
+                                     WokviElementData const& element_data,
                                      WokviRef const& data)
-    : state_(state)
-    , data_(data)
-    , form_factor_A_(state.form_factor_A())  // TODO:
-                                             // Reference?
-{
-    // Calculate cross sections
-    const WokviXsCalculator xsec(state);
-
-    const real_type nuc_xsec = xsec.nuclear_xsec();
-    const real_type elec_xsec = xsec.electron_xsec();
-
-    total_cross_section_ = nuc_xsec + elec_xsec;
-    if (total_cross_section_ > 0.0)
-    {
-        elec_ratio_ = elec_xsec / total_cross_section_;
-    }
-}
-
-//---------------------------------------------------------------------------//
-/*!
- * The total (nuclear + electron) cross section.
- */
-CELER_FUNCTION real_type WokviDistribution::cross_section() const
-{
-    return total_cross_section_;
-}
+    : data_(data)
+    , target_(target)
+    , element_data_(element_data)
+    , inc_energy_(value_as<Energy>(particle.energy()))
+    , inc_mass_(value_as<Mass>(particle.mass()))
+{}
 
 //---------------------------------------------------------------------------//
 /*!
@@ -119,47 +105,50 @@ CELER_FUNCTION Real3 WokviDistribution::operator()(Engine& rng) const
 {
     UniformRealDistribution<real_type> sample;
 
+    const real_type screen_coeff = compute_screening_coefficient()
+    const real_type cos_t_max_elec = compute_max_electron_cos_t()
+
+    const real_type scale = (target_Z() == 1) ? 3.097e-6 : value_as<MomentumSq>(data_.form_momentum_scale);
+    const real_type form_factor_A = inc_mom_sq() * fastpow(target_.atomic_mass_number().get(), 2 * 0.27) / scale;
+
     // Parameters for scattering of a nucleus
-    real_type form_factor = form_factor_A_;
-    real_type cos_t1 = state_.cos_t_min_nuc();
-    real_type cos_t2 = state_.cos_t_max_nuc();
+    real_type form_factor = form_factor_A;
+    real_type cos_t1 =  1;
+    real_type cos_t2 = -1;
 
     // Randomly choose if scattered off of electrons instead
-    if (elec_ratio_ > 0.0 && sample(rng) <= elec_ratio_)
+    const WokviXsCalculator xsec(target_Z(), screen_coeff, cos_t_max_elec);
+    const real_type elec_ratio = xsec();
+    if (sample(rng) < elec_ratio)
     {
         form_factor = 0.0;
-        cos_t1 = state_.cos_t_min_elec();
-        cos_t2 = state_.cos_t_max_elec();
+        // TODO: Can simplify this logic with
+        //       -1 <= cos_t_max_elec <= 1
+        cos_t1 = std::max(cos_t1, cos_t_max_elec);
+        cos_t2 = std::max(cos_t2, cos_t_max_elec);
     }
 
-    // Check angular bounds are valid
-    if (cos_t1 < cos_t2)
-    {
-        return {0.0, 0.0, 1.0};
-    }
-
-    // Sample scattering angle [Fern 92] where z1 = 2*mu = 1 - cos(t)
-    const real_type w1 = state_.w_term(cos_t1);
-    const real_type w2 = state_.w_term(cos_t2);
-    const real_type z1 = w1 * w2 / (w1 + sample(rng) * (w2 - w1))
-                         - state_.screening_coefficient();
+    // Sample scattering angle [Fern 92] where cos(theta) = 1 + 2*mu
+    // For incident electrons / positrons, theta_min = 0 always
+    const real_type w1 = 1 - cos_t1 + screen_coeff;
+    const real_type w2 = 1 - cos_t2 + screen_coeff;
+    const real_type cos_theta = clamp(1 + screen_coeff - w1 * w2 / (w1 + sample(rng) * (w2 - w1)), -1, 1);
 
     // Calculate rejection
     // TODO: Reference?
-    MottXsCalculator mott_xsec(state_);
-    const real_type fm = calculate_form_factor(form_factor, z1);
-    const real_type g_rej = mott_xsec(sqrt(z1)) * ipow<2>(fm);
+    MottXsCalculator mott_xsec(element_data, inc_energy_, inc_mass_);
+    const real_type fm = calculate_form_factor(form_factor, cos_theta);
+    const real_type g_rej = mott_xsec(cos_theta) * ipow<2>(fm);
 
     if (sample(rng) > g_rej)
     {
-        return {0.0, 0.0, 1.0};
+        return {0, 0, 1};
     }
 
     // Calculate scattered vector assuming azimuthal angle is isotropic
-    const real_type cos_t = clamp(1.0 - z1, -1.0, 1.0);
-    const real_type sin_t = sqrt((1.0 - cos_t) * (1.0 + cos_t));
-    const real_type phi = 2.0 * celeritas::constants::pi * sample(rng);
-    return {sin_t * cos(phi), sin_t * sin(phi), cos_t};
+    const real_type sin_theta = sqrt((1 - cos_theta) * (1 + cos_theta));
+    const real_type phi = 2 * celeritas::constants::pi * sample(rng);
+    return {sin_theta * cos(phi), sin_theta * sin(phi), cos_theta};
 }
 
 //---------------------------------------------------------------------------//
@@ -168,26 +157,25 @@ CELER_FUNCTION Real3 WokviDistribution::operator()(Engine& rng) const
  * TODO: Reference?
  */
 CELER_FUNCTION real_type
-WokviDistribution::calculate_form_factor(real_type formf, real_type z1) const
+WokviDistribution::calculate_form_factor(real_type formf, real_type cos_t) const
 {
     switch (data_.form_factor_type)
     {
         case NuclearFormFactorType::Flat: {
             // In units MeV
             const real_type ccoef = 0.00508;
-            const real_type x = sqrt(2.0 * state_.inc_mom_sq * z1) * ccoef
-                                * 2.0;
+            const real_type x = sqrt(2 * inc_mom_sq() * (1-cos_t)) * ccoef * 2;
             return flat_form_factor(x)
                    * flat_form_factor(
-                       x * 0.6 * fastpow(state_.target_mass(), 1.0 / 3.0));
+                       x * 0.6 * fastpow(value_as<Mass>(target_.nuclear_mass()), 1 / 3));
         }
         break;
         case NuclearFormFactorType::Exponential:
-            return 1.0 / ipow<2>(1.0 + formf * z1);
+            return 1 / ipow<2>(1 + formf * (1-cos_t));
         case NuclearFormFactorType::Gaussian:
-            return exp(-2.0 * formf * z1);
+            return exp(-2 * formf * (1-cos_t));
         default:
-            return 1.0;
+            return 1;
     }
 }
 
@@ -200,6 +188,62 @@ CELER_FUNCTION real_type WokviDistribution::flat_form_factor(real_type x) const
 {
     return 3.0 * (sin(x) - x * cos(x)) / ipow<3>(x);
 }
+
+//---------------------------------------------------------------------------//
+CELER_FUNCTION int WokviDistribution::target_Z() const
+{
+    return target_.atomic_number().get();
+}
+
+CELER_FUNCTION real_type WokviDistribution::inc_mom_sq() const
+{
+    return calc_mom_sq(inc_energy_, inc_mass_);
+}
+
+//---------------------------------------------------------------------------//
+CELER_FUNCTION real_type WokviDistribution::compute_screening_coefficient() const
+{
+    // TODO: Reference for just proton correction?
+    real_type correction = 1.0;
+    const real_type sq_cbrt_z = fast_pow(target_Z(), 2/3);
+    if (target_Z() > 1)
+    {
+        const real_type tau = inc_energy_ / inc_mass_;
+        const real_type factor = sqrt(tau / (tau + sq_cbrt_z));
+        const real_type inv_beta_sq = 1 + ipow<2>(inc_mass) / inc_mom_sq();
+        correction = min(
+                         target_Z() * 1.13,
+                         1.13 + 3.76 * ipow<2>(target_Z()) * inv_beta_sq * constants::alpha_fine_structure * factor);
+    }
+
+    return correction
+           * value_as<MomentumSq>(data_.screen_r_sq_elec)
+           * sq_cbrt_z
+           / inc_mom_sq();
+}
+
+//---------------------------------------------------------------------------//
+CELER_FUNCTION real_type WokviDistribution::compute_max_electron_cos_t() const
+{
+    // TODO: Cut Energy?
+    const Energy cut_energy;
+    const real_type t_max = 0.5 * inc_energy_;
+    const real_type t = min(value_as<Energy>(cut_energy), t_max);
+    const real_type t1 = inc_energy_ - t;
+    if (t1 > 0.0)
+    {
+        const real_type mom1_sq = calc_mom_sq(t, value_as<Mass>(data_.electron_mass));
+        const real_type mom2_sq = calc_mom_sq(t1, value_as<Mass>(data_.electron_mass));
+        const real_type ctm = (inc_mom_sq() + mom2_sq - mom1_sq) * 0.5
+                              / sqrt(inc_mom_sq() * mom2_sq);
+        return clamp(ctm, 0.0, 1.0);
+    }
+
+    // Default value
+    return 1.0;
+
+}
+
 
 //---------------------------------------------------------------------------//
 }  // namespace celeritas

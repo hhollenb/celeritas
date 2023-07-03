@@ -51,10 +51,6 @@ class WokviInteractor
   private:
     //// DATA ////
 
-    // Computed values for this track, shared among multiple parts of the
-    // Wokvi model
-    const detail::WokviStateHelper state_;
-
     // Constant shared data
     WokviRef const& data_;
 
@@ -63,6 +59,10 @@ class WokviInteractor
 
     // Allocator for secondary tracks
     StackAllocator<Secondary>& allocate_;
+
+    real_type inc_energy_;
+    real_type inc_mass_;
+    IsotopeView target_;
 
     //// HELPER FUNCTIONS ////
 
@@ -92,6 +92,9 @@ WokviInteractor::WokviInteractor(WokviRef const& shared,
     , data_(shared)
     , inc_direction_(inc_direction)
     , allocate_(allocate)
+    , inc_energy_(particle.energy())
+    , inc_mass_(particle.mass())
+    , target_(material...)
 {
 }
 
@@ -103,12 +106,7 @@ template<class Engine>
 CELER_FUNCTION Interaction WokviInteractor::operator()(Engine& rng)
 {
     // Distribution model governing the scattering
-    WokviDistribution distrib(state_, data_);
-    if (distrib.cross_section() == 0.0)
-    {
-        return Interaction::from_unchanged(Energy{state_.inc_energy},
-                                           inc_direction_);
-    }
+    WokviDistribution distrib(data_);
 
     // Incident particle scatters
     Interaction result;
@@ -119,11 +117,11 @@ CELER_FUNCTION Interaction WokviInteractor::operator()(Engine& rng)
 
     // Calculate recoil and final energies
     real_type recoil_energy = calc_recoil_energy(new_direction);
-    real_type final_energy = state_.inc_energy - recoil_energy;
-    if (final_energy < 0.0)
+    real_type final_energy = inc_energy_ - recoil_energy;
+    if (final_energy < 0)
     {
-        recoil_energy = state_.inc_energy;
-        final_energy = 0.0;
+        recoil_energy = inc_energy_;
+        final_energy = 0;
     }
     result.energy = Energy{final_energy};
 
@@ -142,10 +140,11 @@ CELER_FUNCTION Interaction WokviInteractor::operator()(Engine& rng)
 CELER_FUNCTION real_type
 WokviInteractor::calc_recoil_energy(Real3 const& new_direction) const
 {
-    const real_type cos_t_1 = 1.0 - new_direction[2];
-    return state_.inc_mom_sq * cos_t_1
-           / (state_.target_mass()
-              + (state_.inc_mass + state_.inc_energy) * cos_t_1);
+    const real_type cos_theta = new_direction[2];
+    const real_type inc_mom_sq = inc_energy_ * (inc_energy_ + 2 * inc_mass_);
+    const real_type target_mass = value_as<Mass>(target_.nuclear_mass());
+    return inc_mom_sq * (1-cos_theta)
+           / (target_mass + (inc_mass_ + inc_energy_) * (1-cos_theta));
 }
 
 //---------------------------------------------------------------------------//
