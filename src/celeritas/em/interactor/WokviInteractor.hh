@@ -143,8 +143,8 @@ WokviInteractor::calc_recoil_energy(Real3 const& new_direction) const
     const real_type cos_theta = new_direction[2];
     const real_type inc_mom_sq = inc_energy_ * (inc_energy_ + 2 * inc_mass_);
     const real_type target_mass = value_as<Mass>(target_.nuclear_mass());
-    return inc_mom_sq * (1-cos_theta)
-           / (target_mass + (inc_mass_ + inc_energy_) * (1-cos_theta));
+    return inc_mom_sq * (1 - cos_theta)
+           / (target_mass + (inc_mass_ + inc_energy_) * (1 - cos_theta));
 }
 
 //---------------------------------------------------------------------------//
