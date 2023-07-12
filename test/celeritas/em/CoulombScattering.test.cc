@@ -8,7 +8,6 @@
 #include "celeritas/Quantities.hh"
 #include "celeritas/Units.hh"
 #include "celeritas/em/interactor/WokviInteractor.hh"
-#include "celeritas/em/interactor/detail/WokviStateHelper.hh"
 #include "celeritas/em/model/WokviModel.hh"
 #include "celeritas/em/model/detail/MottInterpolatedCoefficients.hh"
 #include "celeritas/mat/MaterialTrackView.hh"
@@ -32,7 +31,8 @@ class CoulombScatteringTest : public InteractorHostTestBase
         // Set up shared material data
         // TODO: Use multiple elements to test elements are picked correctly
         MaterialParams::Input mat_inp;
-        mat_inp.elements = {{AtomicNumber{29}, units::AmuMass{63.546}, "Cu"}};
+        mat_inp.elements
+            = {{AtomicNumber{29}, units::AmuMass{63.546}, {}, "Cu"}};
         mat_inp.materials = {
             {0.141 * constants::na_avogadro,
              293.0,
@@ -83,15 +83,11 @@ TEST_F(CoulombScatteringTest, wokvi_data)
 {
     WokviHostRef const& data = model_->host_ref();
 
-    EXPECT_SOFT_EQ(native_value_from(data.electron_mass),
-                   constants::electron_mass);
-    EXPECT_SOFT_EQ(
-        native_value_from(data.coeff),
-        2 * constants::pi
-            * ipow<2>(constants::electron_mass * constants::r_electron));
-    EXPECT_EQ(data.form_factor_type, NuclearFormFactorType::Exponential);
-    EXPECT_SOFT_EQ(data.form_momentum_scale.value(), 1.0 / 6.937e-6);
-    EXPECT_SOFT_EQ(data.screen_r_sq_elec.value(), 8.87463e-6);
+    EXPECT_SOFT_EQ(constants::electron_mass,
+                   native_value_from(data.electron_mass));
+    EXPECT_EQ(NuclearFormFactorType::Exponential, data.form_factor_type);
+    EXPECT_SOFT_EQ(1.0 / 6.937e-6, data.form_momentum_scale.value());
+    EXPECT_SOFT_EQ(8.87463e-6, data.screen_r_sq_elec.value());
 
     // Check element data is filled in correctly
     unsigned int const num_elements = this->material_params()->num_elements();
@@ -105,46 +101,79 @@ TEST_F(CoulombScatteringTest, wokvi_data)
         {
             for (auto j : range(6))
             {
-                EXPECT_EQ(element_data.mott_coeff[i][j],
-                          detail::interpolated_mott_coeffs[mott_index][i][j]);
+                EXPECT_EQ(detail::interpolated_mott_coeffs[mott_index][i][j],
+                          element_data.mott_coeff[i][j]);
             }
         }
     }
 }
 
-TEST_F(CoulombScatteringTest, helper_state)
+TEST_F(CoulombScatteringTest, wokvi_xs)
 {
-    detail::WokviStateHelper state(this->particle_track(),
-                                   this->material_track().make_material_view(),
-                                   ElementComponentId{0},
-                                   units::MevEnergy{10},
-                                   model_->host_ref());
-
-    // Check the incident particle quantities are correct
-    EXPECT_SOFT_EQ(state.inc_energy, 10.0);
-    EXPECT_SOFT_EQ(state.inc_mass, 0.51099894609999996);
-    EXPECT_SOFT_EQ(state.inc_mom_sq, 110.22);
-    EXPECT_SOFT_EQ(state.inv_beta_sq, 1.0023691);
-
-    // Check the element data is correct
-    EXPECT_EQ(state.element.atomic_number().get(), 29);
-    EXPECT_SOFT_EQ(state.target_Z(), 29);
-    EXPECT_SOFT_EQ(state.target_mass(), 63.546);
-    EXPECT_SOFT_EQ(state.element_data.mott_coeff[0][1], 3.24569e-5);
-
-    EXPECT_SOFT_EQ(state.kinetic_factor,
-                   value_as<WokviRef::CoeffQuantity>(model_->host_ref().coeff)
-                       * 29.0 * 1.0023691 / 110.22);
-    EXPECT_SOFT_EQ(state.mott_factor(), 1.1682);
-    EXPECT_SOFT_EQ(state.screening_coefficient(), 2.0);
-
-    // Check angle bounds
-    EXPECT_SOFT_EQ(state.cos_t_min_nuc(), 1.0);
-    EXPECT_SOFT_EQ(state.cos_t_max_nuc(), -1.0);
-    EXPECT_SOFT_EQ(state.max_electron_cos_t(), -1.0);
-    EXPECT_SOFT_EQ(state.cos_t_min_elec(), 1.0);
-    EXPECT_SOFT_EQ(state.cos_t_max_elec(), -1.0);
+    WokviXsCalculator xsec(29, 1.73, -0.6);
+    EXPECT_SOFT_EQ(0.0289065, xsec());
 }
+
+TEST_F(CoulombScatteringTest, mott_xs)
+{
+    WokviHostRef const& data = model_->host_ref();
+
+    real_type inc_energy
+        = value_as<units::MevEnergy>(particle_track().energy());
+    real_type inc_mass = value_as<units::MevMass>(particle_track().mass());
+    WokviElementData const& element_data = data.elem_data[ElementId(0)];
+
+    cout << "Energy: " << inc_energy << "\n"
+         << "Mass: " << inc_mass << "\n";
+
+    MottXsCalculator xsec(element_data, inc_energy, inc_mass);
+    EXPECT_SOFT_EQ(0.837583, xsec(0.21));
+
+    static double const cos_ts[] = {0.21, 0.5, 0.9, 0, -0.1, -0.6, -0.7};
+    static double const expected_xsecs[]
+        = {0.837776, 0.986799, 1.09074, 0.712007, 0.64827, 0.302596, 0.229266};
+    std::vector<double> xsecs;
+    for (double cos_t : cos_ts)
+    {
+        xsecs.push_back(xsec(cos_t));
+    }
+
+    EXPECT_VEC_SOFT_EQ(xsecs, expected_xsecs);
+}
+
+// TEST_F(CoulombScatteringTest, helper_state)
+// {
+//     detail::WokviStateHelper state(this->particle_track(),
+//                                    this->material_track().make_material_view(),
+//                                    ElementComponentId{0},
+//                                    units::MevEnergy{10},
+//                                    model_->host_ref());
+//
+//     // Check the incident particle quantities are correct
+//     EXPECT_SOFT_EQ(state.inc_energy, 10.0);
+//     EXPECT_SOFT_EQ(state.inc_mass, 0.51099894609999996);
+//     EXPECT_SOFT_EQ(state.inc_mom_sq, 110.22);
+//     EXPECT_SOFT_EQ(state.inv_beta_sq, 1.0023691);
+//
+//     // Check the element data is correct
+//     EXPECT_EQ(state.element.atomic_number().get(), 29);
+//     EXPECT_SOFT_EQ(state.target_Z(), 29);
+//     EXPECT_SOFT_EQ(state.target_mass(), 63.546);
+//     EXPECT_SOFT_EQ(state.element_data.mott_coeff[0][1], 3.24569e-5);
+//
+//     EXPECT_SOFT_EQ(state.kinetic_factor,
+//                    value_as<WokviRef::CoeffQuantity>(model_->host_ref().coeff)
+//                        * 29.0 * 1.0023691 / 110.22);
+//     EXPECT_SOFT_EQ(state.mott_factor(), 1.1682);
+//     EXPECT_SOFT_EQ(state.screening_coefficient(), 2.0);
+//
+//     // Check angle bounds
+//     EXPECT_SOFT_EQ(state.cos_t_min_nuc(), 1.0);
+//     EXPECT_SOFT_EQ(state.cos_t_max_nuc(), -1.0);
+//     EXPECT_SOFT_EQ(state.max_electron_cos_t(), -1.0);
+//     EXPECT_SOFT_EQ(state.cos_t_min_elec(), 1.0);
+//     EXPECT_SOFT_EQ(state.cos_t_max_elec(), -1.0);
+// }
 
 //---------------------------------------------------------------------------//
 }  // namespace test

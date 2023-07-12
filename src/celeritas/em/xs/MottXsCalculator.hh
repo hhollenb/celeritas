@@ -21,11 +21,12 @@ class MottXsCalculator
 {
   public:
     // Construct with state data
-    inline CELER_FUNCTION
-    MottXsCalculator(WokviElementData const& element_data, real_type beta);
+    inline CELER_FUNCTION MottXsCalculator(WokviElementData const& element_data,
+                                           real_type inc_energy,
+                                           real_type inc_mass);
 
     // Ratio of Mott and Rutherford cross sections
-    inline CELER_FUNCTION real_type operator()(real_type fcos_t) const;
+    inline CELER_FUNCTION real_type operator()(real_type cos_t) const;
 
   private:
     WokviElementData const& element_data_;
