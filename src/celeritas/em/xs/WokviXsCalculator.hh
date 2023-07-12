@@ -9,7 +9,8 @@
 
 #include "corecel/Macros.hh"
 #include "corecel/Types.hh"
-#include "celeritas/em/interactor/detail/WokviStateHelper.hh"
+#include "corecel/math/Algorithms.hh"
+#include "celeritas/phys/AtomicNumber.hh"
 
 namespace celeritas
 {
@@ -22,14 +23,15 @@ class WokviXsCalculator
 {
   public:
     // Construct the calculator from the given values
-    inline CELER_FUNCTION
-    WokviXsCalculator(AtomicNumber const& target_z, real_type screening_coefficient, real_type cos_t_max_elec);
+    inline CELER_FUNCTION WokviXsCalculator(int target_z,
+                                            real_type screening_coefficient,
+                                            real_type cos_t_max_elec);
 
     // The ratio of electron to total cross section for Coulomb scattering
     inline CELER_FUNCTION real_type operator()() const;
 
   private:
-    AtomicNumber const& target_z_;
+    int const target_z_;
     real_type const screening_coefficient_;
     real_type const cos_t_max_elec_;
 
@@ -45,16 +47,16 @@ class WokviXsCalculator
  * Construct with state data
  */
 CELER_FUNCTION
-WokviXsCalculator::WokviXsCalculator(
-    AtomicNumber const& target_z,
-    real_type screening_coefficient,
-    real_type cos_t_max_elec)
+WokviXsCalculator::WokviXsCalculator(int target_z,
+                                     real_type screening_coefficient,
+                                     real_type cos_t_max_elec)
     : target_z_(target_z)
     , screening_coefficient_(screening_coefficient)
     , cos_t_max_elec_(cos_t_max_elec)
 {
-    CELER_EXPECT(screening_coefficient > 0)
-    CELER_EXPECT(cos_t_max_elec >= -1 && cos_t_max_elec <= 1)
+    CELER_EXPECT(target_z_ > 0);
+    CELER_EXPECT(screening_coefficient > 0);
+    CELER_EXPECT(cos_t_max_elec >= -1 && cos_t_max_elec <= 1);
 }
 
 
@@ -63,7 +65,7 @@ WokviXsCalculator::WokviXsCalculator(
  * Ratio of electron cross section to the total (nuclear + electron)
  * cross section.
  */
-CELER_FUNCTION real_type WokviXsCalculator::operator() const
+CELER_FUNCTION real_type WokviXsCalculator::operator()() const
 {
     const real_type nuc_xsec = nuclear_xsec();
     const real_type elec_xsec = electron_xsec();
@@ -79,7 +81,7 @@ CELER_FUNCTION real_type WokviXsCalculator::operator() const
  */
 CELER_FUNCTION real_type WokviXsCalculator::nuclear_xsec() const
 {
-    return target_z_.get() / (1 + screening_coefficient_);
+    return target_z_ / (1 + screening_coefficient_);
 }
 
 //---------------------------------------------------------------------------//
@@ -88,7 +90,8 @@ CELER_FUNCTION real_type WokviXsCalculator::nuclear_xsec() const
  */
 CELER_FUNCTION real_type WokviXsCalculator::electron_xsec() const
 {
-    return (1 - cos_t_max_elec_) / (1 - cos_t_max_elec_ + screening_coefficient_);
+    return (1 - cos_t_max_elec_)
+           / (1 - cos_t_max_elec_ + 2 * screening_coefficient_);
 }
 
 //---------------------------------------------------------------------------//

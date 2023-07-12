@@ -56,13 +56,6 @@ WokviModel::WokviModel(ActionId id,
     // Electron mass
     host_data.electron_mass = particles.get(host_data.ids.electron).mass();
 
-    // Calculate coefficient
-    // 2 pi (m_e * r_e * c)
-    host_data.coeff = native_value_to<WokviRef::CoeffQuantity>(
-        2.0 * constants::pi
-        * ipow<2>(constants::electron_mass * constants::r_electron
-                  * constants::c_light));
-
     // TODO: Select form factor
     host_data.form_factor_type = NuclearFormFactorType::Exponential;
 
@@ -71,9 +64,10 @@ WokviModel::WokviModel(ActionId id,
     // G4EmParameters::Instance()->ScreeningFactor();
 
     // Thomas-Fermi constant C_TF
-    const real_type ctf = 0.5 * fastpow(3.0 * constants::pi / 4.0, 2.0 / 3.0);
+    const real_type ctf
+        = fastpow(3 * constants::pi / 4, static_cast<real_type>(2) / 3) / 2;
     host_data.screen_r_sq_elec = native_value_to<units::MevMomentumSq>(
-        0.5 * ipow<2>(constants::hbar_planck / (ctf * constants::a0_bohr)));
+        ipow<2>(constants::hbar_planck / (2 * ctf * constants::a0_bohr)));
 
     // This is the inverse of Geant's constn
     // need to multiply by 2 to match Geant's magic number

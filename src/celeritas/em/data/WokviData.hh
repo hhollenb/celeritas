@@ -62,8 +62,6 @@ struct WokviData
 {
     using Mass = units::MevMass;
     using MomentumSq = units::MevMomentumSq;
-    using CoeffQuantity
-        = Quantity<UnitProduct<MomentumSq::unit_type, units::Millibarn>>;
 
     template<class T>
     using ElementItems = celeritas::Collection<T, W, M, ElementId>;
@@ -73,9 +71,6 @@ struct WokviData
 
     // Per element form factors
     ElementItems<WokviElementData> elem_data;
-
-    // Constant coefficient in kinematic factor
-    CoeffQuantity coeff;
 
     // Mass of the electron
     Mass electron_mass;
@@ -102,7 +97,6 @@ struct WokviData
         CELER_EXPECT(other);
         ids = other.ids;
         elem_data = other.elem_data;
-        coeff = other.coeff;
         electron_mass = other.electron_mass;
         form_factor_type = other.form_factor_type;
         screen_r_sq_elec = other.screen_r_sq_elec;
