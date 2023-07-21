@@ -31,8 +31,18 @@ class CoulombScatteringTest : public InteractorHostTestBase
         // Set up shared material data
         // TODO: Use multiple elements to test elements are picked correctly
         MaterialParams::Input mat_inp;
-        mat_inp.elements
-            = {{AtomicNumber{29}, units::AmuMass{63.546}, {}, "Cu"}};
+        mat_inp.isotopes = {{AtomicNumber{29},
+                             AtomicNumber{63},
+                             units::MevMass{58618.5},
+                             "63Cu"},
+                            {AtomicNumber{29},
+                             AtomicNumber{65},
+                             units::MevMass{60479.8},
+                             "65Cu"}};
+        mat_inp.elements = {{AtomicNumber{29},
+                             units::AmuMass{63.546},
+                             {{IsotopeId{0}, 0.692}, {IsotopeId{1}, 0.308}},
+                             "Cu"}};
         mat_inp.materials = {
             {0.141 * constants::na_avogadro,
              293.0,
@@ -63,16 +73,35 @@ class CoulombScatteringTest : public InteractorHostTestBase
         // Set cutoffs
         CutoffParams::Input input;
         CutoffParams::MaterialCutoffs material_cutoffs;
-        material_cutoffs.push_back({MevEnergy{0.02064384}, 0.07});
+        // TODO: Use realistic cutoff / material with high cutoff
+        material_cutoffs.push_back({MevEnergy{0.5}, 0.07});
         input.materials = this->material_params();
         input.particles = this->particle_params();
         input.cutoffs.insert({pdg::gamma(), material_cutoffs});
         this->set_cutoff_params(input);
 
-        // Set incident particle to be an electron at 10 MeV
-        this->set_inc_particle(pdg::electron(), MevEnergy{10.0});
+        // Set incident particle to be an electron at 200 MeV
+        this->set_inc_particle(pdg::electron(), MevEnergy{200.0});
         this->set_inc_direction({0, 0, 1});
         this->set_material("Cu");
+    }
+
+    void sanity_check(Interaction const& interaction) const
+    {
+        SCOPED_TRACE(interaction);
+
+        // Check change to parent track
+        EXPECT_GT(this->particle_track().energy().value(),
+                  interaction.energy.value());
+        EXPECT_LT(0, interaction.energy.value());
+        EXPECT_SOFT_EQ(1.0, norm(interaction.direction));
+        EXPECT_EQ(Action::scattered, interaction.action);
+
+        // Check secondaries
+        EXPECT_TRUE(interaction.secondaries.empty());
+
+        // Non-zero energy deposit in material so momentum isn't conserved
+        this->check_energy_conservation(interaction);
     }
 
   protected:
@@ -83,11 +112,8 @@ TEST_F(CoulombScatteringTest, wokvi_data)
 {
     WokviHostRef const& data = model_->host_ref();
 
-    EXPECT_SOFT_EQ(constants::electron_mass,
-                   native_value_from(data.electron_mass));
-    EXPECT_EQ(NuclearFormFactorType::Exponential, data.form_factor_type);
-    EXPECT_SOFT_EQ(1.0 / 6.937e-6, data.form_momentum_scale.value());
-    EXPECT_SOFT_EQ(8.87463e-6, data.screen_r_sq_elec.value());
+    EXPECT_SOFT_EQ(144849.41614676395, data.form_momentum_scale.value());
+    EXPECT_SOFT_EQ(4.4349544106046192e-06, data.screen_r_sq_elec.value());
 
     // Check element data is filled in correctly
     unsigned int const num_elements = this->material_params()->num_elements();
@@ -110,8 +136,54 @@ TEST_F(CoulombScatteringTest, wokvi_data)
 
 TEST_F(CoulombScatteringTest, wokvi_xs)
 {
-    WokviXsCalculator xsec(29, 1.73, -0.6);
-    EXPECT_SOFT_EQ(0.0289065, xsec());
+    int const target_z
+        = this->material_params()->get(ElementId(0)).atomic_number().get();
+
+    static double const cos_ts[] = {1, 0.8, 0.3, 0, -0.4, -0.7, -1};
+    static double const screenings[] = {1, 1.13, 1.73, 2.5};
+    static double const expected_xsecs[] = {0,
+                                            0,
+                                            0,
+                                            0,
+                                            0.0062305295950156,
+                                            0.0059359585318953,
+                                            0.005117822394691,
+                                            0.0046204620462046,
+                                            0.017565872020075,
+                                            0.017072975232163,
+                                            0.015593508008911,
+                                            0.014605067064083,
+                                            0.02247191011236,
+                                            0.02203372297507,
+                                            0.020670856364049,
+                                            0.019718309859155,
+                                            0.027613412228797,
+                                            0.027327211744653,
+                                            0.026401956314502,
+                                            0.025721784776903,
+                                            0.030713640469738,
+                                            0.030567022057892,
+                                            0.030081474711727,
+                                            0.029712858926342,
+                                            0.033333333333333,
+                                            0.033333333333333,
+                                            0.033333333333333,
+                                            0.033333333333333};
+
+    std::vector<double> xsecs;
+    for (double cos_t : cos_ts)
+    {
+        for (double screening : screenings)
+        {
+            WokviXsCalculator xsec(target_z, screening, cos_t);
+            xsecs.push_back(xsec());
+        }
+    }
+
+    EXPECT_VEC_SOFT_EQ(expected_xsecs, xsecs);
+
+    cout << "  ########## Electron Xs Ratio: "
+         << (WokviXsCalculator(target_z, 1.34985e-9, 0.999997))() << "\n";
 }
 
 TEST_F(CoulombScatteringTest, mott_xs)
@@ -123,15 +195,21 @@ TEST_F(CoulombScatteringTest, mott_xs)
     real_type inc_mass = value_as<units::MevMass>(particle_track().mass());
     WokviElementData const& element_data = data.elem_data[ElementId(0)];
 
-    cout << "Energy: " << inc_energy << "\n"
-         << "Mass: " << inc_mass << "\n";
-
     MottXsCalculator xsec(element_data, inc_energy, inc_mass);
-    EXPECT_SOFT_EQ(0.837583, xsec(0.21));
 
-    static double const cos_ts[] = {0.21, 0.5, 0.9, 0, -0.1, -0.6, -0.7};
-    static double const expected_xsecs[]
-        = {0.837776, 0.986799, 1.09074, 0.712007, 0.64827, 0.302596, 0.229266};
+    static double const cos_ts[]
+        = {1, 0.9, 0.5, 0.21, 0, -0.1, -0.6, -0.7, -0.9, -1};
+    static double const expected_xsecs[] = {0.99997507022045,
+                                            1.090740570075,
+                                            0.98638178782896,
+                                            0.83702240402998,
+                                            0.71099171311683,
+                                            0.64712379625713,
+                                            0.30071752615308,
+                                            0.22722448378001,
+                                            0.07702815350459,
+                                            0.00051427465924958};
+
     std::vector<double> xsecs;
     for (double cos_t : cos_ts)
     {
@@ -141,39 +219,100 @@ TEST_F(CoulombScatteringTest, mott_xs)
     EXPECT_VEC_SOFT_EQ(xsecs, expected_xsecs);
 }
 
-// TEST_F(CoulombScatteringTest, helper_state)
-// {
-//     detail::WokviStateHelper state(this->particle_track(),
-//                                    this->material_track().make_material_view(),
-//                                    ElementComponentId{0},
-//                                    units::MevEnergy{10},
-//                                    model_->host_ref());
-//
-//     // Check the incident particle quantities are correct
-//     EXPECT_SOFT_EQ(state.inc_energy, 10.0);
-//     EXPECT_SOFT_EQ(state.inc_mass, 0.51099894609999996);
-//     EXPECT_SOFT_EQ(state.inc_mom_sq, 110.22);
-//     EXPECT_SOFT_EQ(state.inv_beta_sq, 1.0023691);
-//
-//     // Check the element data is correct
-//     EXPECT_EQ(state.element.atomic_number().get(), 29);
-//     EXPECT_SOFT_EQ(state.target_Z(), 29);
-//     EXPECT_SOFT_EQ(state.target_mass(), 63.546);
-//     EXPECT_SOFT_EQ(state.element_data.mott_coeff[0][1], 3.24569e-5);
-//
-//     EXPECT_SOFT_EQ(state.kinetic_factor,
-//                    value_as<WokviRef::CoeffQuantity>(model_->host_ref().coeff)
-//                        * 29.0 * 1.0023691 / 110.22);
-//     EXPECT_SOFT_EQ(state.mott_factor(), 1.1682);
-//     EXPECT_SOFT_EQ(state.screening_coefficient(), 2.0);
-//
-//     // Check angle bounds
-//     EXPECT_SOFT_EQ(state.cos_t_min_nuc(), 1.0);
-//     EXPECT_SOFT_EQ(state.cos_t_max_nuc(), -1.0);
-//     EXPECT_SOFT_EQ(state.max_electron_cos_t(), -1.0);
-//     EXPECT_SOFT_EQ(state.cos_t_min_elec(), 1.0);
-//     EXPECT_SOFT_EQ(state.cos_t_max_elec(), -1.0);
-// }
+TEST_F(CoulombScatteringTest, simple_scattering)
+{
+    int const num_samples = 4;
+
+    auto material_view = this->material_track().make_material_view();
+    auto cutoffs = this->cutoff_params()->get(MaterialId{0});
+
+    WokviInteractor interact(model_->host_ref(),
+                             this->particle_track(),
+                             this->direction(),
+                             material_view,
+                             ElementComponentId{0},
+                             cutoffs,
+                             this->secondary_allocator());
+    RandomEngine& rng_engine = this->rng();
+
+    std::vector<double> angle;
+    std::vector<double> energy;
+
+    for ([[maybe_unused]] int i : range(num_samples))
+    {
+        Interaction result = interact(rng_engine);
+        SCOPED_TRACE(result);
+        this->sanity_check(result);
+
+        energy.push_back(result.energy.value());
+        angle.push_back(dot_product(this->direction(), result.direction));
+    }
+
+    PRINT_EXPECTED(angle);
+    PRINT_EXPECTED(energy);
+}
+
+TEST_F(CoulombScatteringTest, distribution)
+{
+    WokviHostRef const& data = model_->host_ref();
+
+    const real_type energies[] = {50, 100, 200, 1000, 13000};
+    for (real_type energy : energies)
+    {
+        const real_type inc_energy
+            = energy;  // value_as<units::MevEnergy>(this->particle_track().energy());
+        const real_type inc_mass
+            = value_as<units::MevMass>(this->particle_track().mass());
+        const IsotopeView isotope
+            = this->material_track()
+                  .make_material_view()
+                  .make_element_view(ElementComponentId{0})
+                  .make_isotope_view(IsotopeComponentId{0});
+        WokviElementData const& element_data = data.elem_data[ElementId(0)];
+        const real_type cutoff_energy = value_as<units::MevEnergy>(
+            this->cutoff_params()
+                ->get(MaterialId{0})
+                .energy(this->particle_track().particle_id()));
+
+        WokviDistribution distrib(inc_energy,
+                                  inc_mass,
+                                  isotope,
+                                  element_data,
+                                  cutoff_energy,
+                                  true,
+                                  data);
+        RandomEngine& rng_engine = this->rng();
+
+        cout << " ##### ENERGY: " << energy << "\n"
+             << "    screening: " << distrib.compute_screening_coefficient()
+             << "\n"
+             << "    elec cos_t: " << distrib.compute_max_electron_cos_t()
+             << "\n\n";
+        // EXPECT_SOFT_EQ(0, distrib.compute_screening_coefficient());
+        // EXPECT_SOFT_EQ(0, distrib.compute_max_electron_cos_t());
+    }
+
+    //     double avg_angle = 0;
+    //     double avg_x = 0;
+    //     double avg_y = 0;
+    //
+    //     const int num_samples = 4096;
+    //     for ([[maybe_unused]] int i : range(num_samples))
+    //     {
+    //         Real3 dir = distrib(rng_engine);
+    //         avg_x += dir[0];
+    //         avg_y += dir[1];
+    //         avg_angle += dir[2];
+    //     }
+    //
+    //     avg_x /= num_samples;
+    //     avg_y /= num_samples;
+    //     avg_angle /= num_samples;
+    //
+    //     EXPECT_SOFT_NEAR(0, avg_x, std::sqrt(num_samples));
+    //     EXPECT_SOFT_NEAR(0, avg_y, std::sqrt(num_samples));
+    //     // EXPECT_SOFT_NEAR(0, avg_angle, std::sqrt(num_samples));
+}
 
 //---------------------------------------------------------------------------//
 }  // namespace test

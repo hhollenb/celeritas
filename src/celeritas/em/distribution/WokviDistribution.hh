@@ -44,11 +44,16 @@ class WokviDistribution
                       real_type inc_mass,
                       IsotopeView const& target,
                       WokviElementData const& element_data,
+                      real_type cutoff_energy,
+                      bool is_electron,
                       WokviRef const& data);
 
     // Sample the scattering direction
     template<class Engine>
     inline CELER_FUNCTION Real3 operator()(Engine& rng) const;
+
+    inline CELER_FUNCTION real_type compute_screening_coefficient() const;
+    inline CELER_FUNCTION real_type compute_max_electron_cos_t() const;
 
   private:
     //// DATA ////
@@ -63,14 +68,13 @@ class WokviDistribution
     // Incident particle data
     real_type const inc_energy_;
     real_type const inc_mass_;
+    bool is_electron_;
 
+    real_type const cutoff_energy_;
 
     inline CELER_FUNCTION real_type calculate_form_factor(real_type formf,
                                                           real_type cos_t) const;
     inline CELER_FUNCTION real_type flat_form_factor(real_type x) const;
-
-    inline CELER_FUNCTION real_type compute_screening_coefficient() const;
-    inline CELER_FUNCTION real_type compute_max_electron_cos_t() const;
 
     inline CELER_FUNCTION int target_Z() const;
     inline CELER_FUNCTION real_type inc_mom_sq() const;
@@ -97,12 +101,16 @@ WokviDistribution::WokviDistribution(real_type inc_energy,
                                      real_type inc_mass,
                                      IsotopeView const& target,
                                      WokviElementData const& element_data,
+                                     real_type cutoff_energy,
+                                     bool is_electron,
                                      WokviRef const& data)
     : data_(data)
     , target_(target)
     , element_data_(element_data)
     , inc_energy_(inc_energy)
     , inc_mass_(inc_mass)
+    , is_electron_(is_electron)
+    , cutoff_energy_(cutoff_energy)
 {}
 
 //---------------------------------------------------------------------------//
@@ -216,6 +224,7 @@ CELER_FUNCTION int WokviDistribution::target_Z() const
     return target_.atomic_number().get();
 }
 
+//---------------------------------------------------------------------------//
 CELER_FUNCTION real_type WokviDistribution::inc_mom_sq() const
 {
     return calc_mom_sq(inc_energy_, inc_mass_);
@@ -233,9 +242,12 @@ CELER_FUNCTION real_type WokviDistribution::compute_screening_coefficient() cons
         const real_type tau = inc_energy_ / inc_mass_;
         const real_type factor = sqrt(tau / (tau + sq_cbrt_z));
         const real_type inv_beta_sq = 1 + ipow<2>(inc_mass_) / inc_mom_sq();
+
         correction = min(
-                         target_Z() * 1.13,
-                         1.13 + 3.76 * ipow<2>(target_Z()) * inv_beta_sq * constants::alpha_fine_structure * factor);
+            target_Z() * 1.13,
+            1.13
+                + 3.76 * ipow<2>(target_Z() * constants::alpha_fine_structure)
+                      * inv_beta_sq * factor);
     }
 
     return correction * value_as<MomentumSq>(data_.screen_r_sq_elec)
@@ -245,22 +257,19 @@ CELER_FUNCTION real_type WokviDistribution::compute_screening_coefficient() cons
 //---------------------------------------------------------------------------//
 CELER_FUNCTION real_type WokviDistribution::compute_max_electron_cos_t() const
 {
-    // TODO: Cut Energy?
-    const Energy cut_energy;
-    const real_type t_max = 0.5 * inc_energy_;
-    const real_type t = min(value_as<Energy>(cut_energy), t_max);
-    const real_type t1 = inc_energy_ - t;
-    if (t1 > 0)
+    const real_type max_energy = is_electron_ ? inc_energy_ / 2 : inc_energy_;
+    const real_type transferred_energy = min(cutoff_energy_, max_energy);
+    if (transferred_energy > 0)
     {
-        const real_type mom1_sq = calc_mom_sq(t, value_as<Mass>(data_.electron_mass));
-        const real_type mom2_sq = calc_mom_sq(t1, value_as<Mass>(data_.electron_mass));
-        const real_type ctm = (inc_mom_sq() + mom2_sq - mom1_sq) * 0.5
-                              / sqrt(inc_mom_sq() * mom2_sq);
+        const real_type ctm
+            = (2 * value_as<Mass>(data_.electron_mass) + inc_energy_)
+              * transferred_energy
+              / sqrt(inc_mom_sq()
+                     * calc_mom_sq(transferred_energy,
+                                   value_as<Mass>(data_.electron_mass)));
         return clamp(ctm, real_type{0}, real_type{1});
     }
-
-    // Default value
-    return 1;
+    return -1234;
 }
 
 

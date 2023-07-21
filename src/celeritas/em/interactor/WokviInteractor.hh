@@ -16,7 +16,9 @@
 #include "celeritas/em/data/WokviData.hh"
 #include "celeritas/em/distribution/WokviDistribution.hh"
 #include "celeritas/mat/ElementView.hh"
+#include "celeritas/mat/IsotopeSelector.hh"
 #include "celeritas/mat/MaterialView.hh"
+#include "celeritas/phys/CutoffView.hh"
 #include "celeritas/phys/Interaction.hh"
 #include "celeritas/phys/ParticleTrackView.hh"
 #include "celeritas/phys/Secondary.hh"
@@ -43,6 +45,7 @@ class WokviInteractor
                                           Real3 const& inc_direction,
                                           MaterialView const& material,
                                           ElementComponentId const& elcomp_id,
+                                          CutoffView const& cutoffs,
                                           StackAllocator<Secondary>& allocate);
 
     template<class Engine>
@@ -60,9 +63,12 @@ class WokviInteractor
     // Allocator for secondary tracks
     StackAllocator<Secondary>& allocate_;
 
-    real_type inc_energy_;
-    real_type inc_mass_;
+    real_type const inc_energy_;
+    real_type const inc_mass_;
     WokviElementData const& element_data_;
+    real_type const cutoff_energy_;
+    ElementView const element_;
+    bool const is_electron_;
 
     //// HELPER FUNCTIONS ////
 
@@ -83,6 +89,7 @@ WokviInteractor::WokviInteractor(WokviRef const& shared,
                                  Real3 const& inc_direction,
                                  MaterialView const& material,
                                  ElementComponentId const& elcomp_id,
+                                 CutoffView const& cutoffs,
                                  StackAllocator<Secondary>& allocate)
     : data_(shared)
     , inc_direction_(inc_direction)
@@ -90,6 +97,9 @@ WokviInteractor::WokviInteractor(WokviRef const& shared,
     , inc_energy_(value_as<Energy>(particle.energy()))
     , inc_mass_(value_as<Mass>(particle.mass()))
     , element_data_(shared.elem_data[material.element_id(elcomp_id)])
+    , cutoff_energy_(value_as<Energy>(cutoffs.energy(particle.particle_id())))
+    , element_(material.make_element_view(elcomp_id))
+    , is_electron_(particle.particle_id() == shared.ids.electron)
 {
 }
 
@@ -100,12 +110,18 @@ WokviInteractor::WokviInteractor(WokviRef const& shared,
 template<class Engine>
 CELER_FUNCTION Interaction WokviInteractor::operator()(Engine& rng)
 {
-    IsotopeView* target_ptr = nullptr;
-    IsotopeView const& target = *target_ptr;
+    // Select an isotope of the target nucleus
+    IsotopeSelector iso_select(element_);
+    const IsotopeView target = element_.make_isotope_view(iso_select(rng));
 
     // Distribution model governing the scattering
-    WokviDistribution distrib(
-        inc_energy_, inc_mass_, target, element_data_, data_);
+    WokviDistribution distrib(inc_energy_,
+                              inc_mass_,
+                              target,
+                              element_data_,
+                              cutoff_energy_,
+                              is_electron_,
+                              data_);
 
     // Incident particle scatters
     Interaction result;

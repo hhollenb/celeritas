@@ -34,17 +34,23 @@ struct WokviExecutor
  */
 CELER_FUNCTION Interaction WokviExecutor::operator()(CoreTrackView const& track)
 {
-    auto material = track.make_material_view().make_material_view();
     auto particle = track.make_particle_view();
+    auto const& dir = track.make_geo_view().dir();
+
+    auto material = track.make_material_view().make_material_view();
+    auto elcomp_id = track.make_physics_step_view().element();
+    auto cutoffs = track.make_cutoff_view();
 
     auto allocate_secondaries
         = track.make_physics_step_view().make_secondary_allocator();
-    auto elcomp_id = track.make_physics_step_view().element();
 
-    auto const& dir = track.make_geo_view().dir();
-
-    WokviInteractor interact(
-        params, particle, dir, material, elcomp_id, allocate_secondaries);
+    WokviInteractor interact(params,
+                             particle,
+                             dir,
+                             material,
+                             elcomp_id,
+                             cutoffs,
+                             allocate_secondaries);
 
     auto rng = track.make_rng_engine();
     return interact(rng);

@@ -66,11 +66,40 @@ WokviModel::WokviModel(ActionId id,
     // Thomas-Fermi constant C_TF
     const real_type ctf
         = fastpow(3 * constants::pi / 4, static_cast<real_type>(2) / 3) / 2;
+    std::cout
+        << "MODEL: \n"
+        << "\tCTF = " << ctf << "\n"
+        << "\tElectron Mass = "
+        << native_value_to<units::MevMass>(constants::electron_mass).value()
+        << "\n"
+        << "\talpha2 = " << ipow<2>(constants::alpha_fine_structure) << "\n"
+        << "\tCeleritas R^2: "
+        << native_value_to<units::MevMomentumSq>(
+               ipow<2>(constants::hbar_planck / (2 * ctf * constants::a0_bohr)))
+               .value()
+        << "\n"
+        << "\tMatching R^2: "
+        << 0.25
+               * ipow<2>(
+                   constants::alpha_fine_structure
+                   * native_value_to<units::MevMass>(constants::electron_mass)
+                         .value()
+                   / ctf)
+        << "\n";
     host_data.screen_r_sq_elec = native_value_to<units::MevMomentumSq>(
         ipow<2>(constants::hbar_planck / (2 * ctf * constants::a0_bohr)));
 
     // This is the inverse of Geant's constn
     // need to multiply by 2 to match Geant's magic number
+    std::cout
+        << "\n\n"
+        << "\tForm Momentum Scale: "
+        << native_value_to<units::MevMomentumSq>(
+               12
+               / ipow<2>(1.27 * (1e-15 * units::meter) / constants::hbar_planck)
+               / 2)
+               .value()
+        << "\n";
     host_data.form_momentum_scale = native_value_to<units::MevMomentumSq>(
         12.0 / ipow<2>(1.27 * (1e-15 * units::meter) / constants::hbar_planck)
         / 2.0);
@@ -114,7 +143,7 @@ void WokviModel::execute(CoreParams const& params, CoreStateHost& state) const
 }
 
 #if !CELER_USE_DEVICE
-void WokviModel::execute(CoreParams const&, coreStateDevice&) const
+void WokviModel::execute(CoreParams const&, CoreStateDevice&) const
 {
     CELER_NOT_CONFIGURED("CUDA OR HIP");
 }
