@@ -55,6 +55,12 @@ class WokviDistribution
     inline CELER_FUNCTION real_type compute_screening_coefficient() const;
     inline CELER_FUNCTION real_type compute_max_electron_cos_t() const;
 
+    // Incident particle data
+    real_type const inc_energy_;
+    real_type const inc_mass_;
+    bool is_electron_;
+    real_type const cutoff_energy_;
+
   private:
     //// DATA ////
 
@@ -64,13 +70,6 @@ class WokviDistribution
     // Target element
     IsotopeView const& target_;
     WokviElementData const& element_data_;
-
-    // Incident particle data
-    real_type const inc_energy_;
-    real_type const inc_mass_;
-    bool is_electron_;
-
-    real_type const cutoff_energy_;
 
     inline CELER_FUNCTION real_type calculate_form_factor(real_type formf,
                                                           real_type cos_t) const;
@@ -259,17 +258,11 @@ CELER_FUNCTION real_type WokviDistribution::compute_max_electron_cos_t() const
 {
     const real_type max_energy = is_electron_ ? inc_energy_ / 2 : inc_energy_;
     const real_type transferred_energy = min(cutoff_energy_, max_energy);
-    if (transferred_energy > 0)
-    {
-        const real_type ctm
-            = (2 * value_as<Mass>(data_.electron_mass) + inc_energy_)
-              * transferred_energy
-              / sqrt(inc_mom_sq()
-                     * calc_mom_sq(transferred_energy,
-                                   value_as<Mass>(data_.electron_mass)));
-        return clamp(ctm, real_type{0}, real_type{1});
-    }
-    return -1234;
+    const real_type r1 = transferred_energy
+                         / (transferred_energy + 2 * inc_mass_);
+    const real_type r2 = inc_energy_ / (inc_energy_ + 2 * inc_mass_);
+    const real_type ctm = sqrt(r1 / r2);
+    return clamp(ctm, real_type{0}, real_type{1});
 }
 
 

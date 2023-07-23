@@ -77,7 +77,8 @@ class CoulombScatteringTest : public InteractorHostTestBase
         material_cutoffs.push_back({MevEnergy{0.5}, 0.07});
         input.materials = this->material_params();
         input.particles = this->particle_params();
-        input.cutoffs.insert({pdg::gamma(), material_cutoffs});
+        input.cutoffs.insert({pdg::electron(), material_cutoffs});
+        input.cutoffs.insert({pdg::positron(), material_cutoffs});
         this->set_cutoff_params(input);
 
         // Set incident particle to be an electron at 200 MeV
@@ -287,6 +288,9 @@ TEST_F(CoulombScatteringTest, distribution)
              << "    screening: " << distrib.compute_screening_coefficient()
              << "\n"
              << "    elec cos_t: " << distrib.compute_max_electron_cos_t()
+             << "\n"
+             << "    inc_energy_: " << distrib.inc_energy_ << "\n"
+             << "    cutoff_energy_: " << distrib.cutoff_energy_ << "\n"
              << "\n\n";
         // EXPECT_SOFT_EQ(0, distrib.compute_screening_coefficient());
         // EXPECT_SOFT_EQ(0, distrib.compute_max_electron_cos_t());
