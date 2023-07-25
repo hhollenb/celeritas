@@ -1,15 +1,15 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2021-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2023 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
-//! \file celeritas/em/xs/WokviXsCalculator.hh
+//! \file celeritas/em/xs/MottXsCalculator.hh
 //---------------------------------------------------------------------------//
 #pragma once
 
 #include "corecel/Macros.hh"
 #include "corecel/Types.hh"
-#include "celeritas/em/data/WokviData.hh"
+#include "celeritas/em/data/WentzelData.hh"
 
 namespace celeritas
 {
@@ -21,15 +21,16 @@ class MottXsCalculator
 {
   public:
     // Construct with state data
-    inline CELER_FUNCTION MottXsCalculator(WokviElementData const& element_data,
-                                           real_type inc_energy,
-                                           real_type inc_mass);
+    inline CELER_FUNCTION
+    MottXsCalculator(WentzelElementData const& element_data,
+                     real_type inc_energy,
+                     real_type inc_mass);
 
     // Ratio of Mott and Rutherford cross sections
     inline CELER_FUNCTION real_type operator()(real_type cos_t) const;
 
   private:
-    WokviElementData const& element_data_;
+    WentzelElementData const& element_data_;
     real_type beta_;
 };
 
@@ -40,7 +41,7 @@ class MottXsCalculator
  * Construct with state data
  */
 CELER_FUNCTION
-MottXsCalculator::MottXsCalculator(WokviElementData const& element_data,
+MottXsCalculator::MottXsCalculator(WentzelElementData const& element_data,
                                    real_type inc_energy,
                                    real_type inc_mass)
     : element_data_(element_data)

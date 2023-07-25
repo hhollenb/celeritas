@@ -9,6 +9,7 @@
 
 #include <memory>
 
+#include "celeritas/io/ImportParameters.hh"
 #include "celeritas/mat/MaterialParams.hh"
 #include "celeritas/phys/Applicability.hh"
 #include "celeritas/phys/ImportedProcessAdapter.hh"
@@ -29,12 +30,14 @@ class CoulombScatteringProcess : public Process
     using SPConstParticles = std::shared_ptr<ParticleParams const>;
     using SPConstMaterials = std::shared_ptr<MaterialParams const>;
     using SPConstImported = std::shared_ptr<ImportedProcesses const>;
+    using SPConstEmParameters = std::shared_ptr<ImportEmParameters const>;
     //!@}
 
   public:
     CoulombScatteringProcess(SPConstParticles particles,
                              SPConstMaterials materials,
-                             SPConstImported process_data);
+                             SPConstImported process_data,
+                             SPConstEmParameters em_params);
 
     VecModel build_models(ActionIdIter start_id) const final;
     StepLimitBuilders step_limits(Applicability range) const final;
@@ -46,6 +49,7 @@ class CoulombScatteringProcess : public Process
     SPConstParticles particles_;
     SPConstMaterials materials_;
     ImportedProcessAdapter imported_;
+    SPConstEmParameters em_params_;
 };
 
 //---------------------------------------------------------------------------//

@@ -1,9 +1,9 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2021-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2023 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
-//! \file celeritas/em/data/WokviData.hh
+//! \file celeritas/em/data/WentzelData.hh
 //---------------------------------------------------------------------------//
 #pragma once
 
@@ -17,9 +17,9 @@ namespace celeritas
 {
 //---------------------------------------------------------------------------//
 /*!
- * Particle and action ids used by WokviModel
+ * Particle and action ids used by WentzelModel
  */
-struct WokviIds
+struct WentzelIds
 {
     ActionId action;
     ParticleId electron;
@@ -33,9 +33,9 @@ struct WokviIds
 
 //---------------------------------------------------------------------------//
 /*!
- * Per-element data used by the WokviModel
+ * Per-element data used by the WentzelModel
  */
-struct WokviElementData
+struct WentzelElementData
 {
     // Matrix of Mott coefficients
     real_type mott_coeff[5][6];
@@ -55,10 +55,10 @@ enum class NuclearFormFactorType
 
 //---------------------------------------------------------------------------//
 /*!
- * Constant shared data used by the WokviModel
+ * Constant shared data used by the WentzelModel
  */
 template<Ownership W, MemSpace M>
-struct WokviData
+struct WentzelData
 {
     using Mass = units::MevMass;
     using MomentumSq = units::MevMomentumSq;
@@ -67,10 +67,10 @@ struct WokviData
     using ElementItems = celeritas::Collection<T, W, M, ElementId>;
 
     // Ids
-    WokviIds ids;
+    WentzelIds ids;
 
     // Per element form factors
-    ElementItems<WokviElementData> elem_data;
+    ElementItems<WentzelElementData> elem_data;
 
     // Mass of the electron
     Mass electron_mass;
@@ -90,9 +90,9 @@ struct WokviData
         return ids && !elem_data.empty();
     }
 
-    // Copy initialize from an existing WokviData
+    // Copy initialize from an existing WentzelData
     template<Ownership W2, MemSpace M2>
-    WokviData& operator=(WokviData<W2, M2> const& other)
+    WentzelData& operator=(WentzelData<W2, M2> const& other)
     {
         CELER_EXPECT(other);
         ids = other.ids;
@@ -105,9 +105,9 @@ struct WokviData
     }
 };
 
-using WokviDeviceRef = DeviceCRef<WokviData>;
-using WokviHostRef = HostCRef<WokviData>;
-using WokviRef = NativeCRef<WokviData>;
+using WentzelDeviceRef = DeviceCRef<WentzelData>;
+using WentzelHostRef = HostCRef<WentzelData>;
+using WentzelRef = NativeCRef<WentzelData>;
 
 //---------------------------------------------------------------------------//
 }  // namespace celeritas

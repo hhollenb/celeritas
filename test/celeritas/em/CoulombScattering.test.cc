@@ -7,9 +7,10 @@
 //---------------------------------------------------------------------------//
 #include "celeritas/Quantities.hh"
 #include "celeritas/Units.hh"
-#include "celeritas/em/interactor/WokviInteractor.hh"
-#include "celeritas/em/model/WokviModel.hh"
+#include "celeritas/em/interactor/WentzelInteractor.hh"
+#include "celeritas/em/model/WentzelModel.hh"
 #include "celeritas/em/model/detail/MottInterpolatedCoefficients.hh"
+#include "celeritas/io/ImportParameters.hh"
 #include "celeritas/mat/MaterialTrackView.hh"
 #include "celeritas/mat/MaterialView.hh"
 #include "celeritas/phys/InteractionIO.hh"
@@ -65,10 +66,11 @@ class CoulombScatteringTest : public InteractorHostTestBase
                 {std::move(ip_electron), std::move(ip_positron)});
         }
 
-        model_ = std::make_shared<WokviModel>(ActionId{0},
-                                              *this->particle_params(),
-                                              *this->material_params(),
-                                              this->imported_processes());
+        model_ = std::make_shared<WentzelModel>(ActionId{0},
+                                                *this->particle_params(),
+                                                *this->material_params(),
+                                                ImportEmParameters{},
+                                                this->imported_processes());
 
         // Set cutoffs
         CutoffParams::Input input;
@@ -106,12 +108,12 @@ class CoulombScatteringTest : public InteractorHostTestBase
     }
 
   protected:
-    std::shared_ptr<WokviModel> model_;
+    std::shared_ptr<WentzelModel> model_;
 };
 
 TEST_F(CoulombScatteringTest, wokvi_data)
 {
-    WokviHostRef const& data = model_->host_ref();
+    WentzelHostRef const& data = model_->host_ref();
 
     EXPECT_SOFT_EQ(144849.41614676395, data.form_momentum_scale.value());
     EXPECT_SOFT_EQ(4.4349544106046192e-06, data.screen_r_sq_elec.value());
@@ -123,7 +125,7 @@ TEST_F(CoulombScatteringTest, wokvi_data)
         int const z = this->material_params()->get(el_id).atomic_number().get();
         int const mott_index = (z <= 92) ? z : 0;
 
-        WokviElementData const& element_data = data.elem_data[el_id];
+        WentzelElementData const& element_data = data.elem_data[el_id];
         for (auto i : range(5))
         {
             for (auto j : range(6))
@@ -176,7 +178,7 @@ TEST_F(CoulombScatteringTest, wokvi_xs)
     {
         for (double screening : screenings)
         {
-            WokviXsCalculator xsec(target_z, screening, cos_t);
+            WentzelXsCalculator xsec(target_z, screening, cos_t);
             xsecs.push_back(xsec());
         }
     }
@@ -184,17 +186,17 @@ TEST_F(CoulombScatteringTest, wokvi_xs)
     EXPECT_VEC_SOFT_EQ(expected_xsecs, xsecs);
 
     cout << "  ########## Electron Xs Ratio: "
-         << (WokviXsCalculator(target_z, 1.34985e-9, 0.999997))() << "\n";
+         << (WentzelXsCalculator(target_z, 1.34985e-9, 0.999997))() << "\n";
 }
 
 TEST_F(CoulombScatteringTest, mott_xs)
 {
-    WokviHostRef const& data = model_->host_ref();
+    WentzelHostRef const& data = model_->host_ref();
 
     real_type inc_energy
         = value_as<units::MevEnergy>(particle_track().energy());
     real_type inc_mass = value_as<units::MevMass>(particle_track().mass());
-    WokviElementData const& element_data = data.elem_data[ElementId(0)];
+    WentzelElementData const& element_data = data.elem_data[ElementId(0)];
 
     MottXsCalculator xsec(element_data, inc_energy, inc_mass);
 
@@ -227,13 +229,12 @@ TEST_F(CoulombScatteringTest, simple_scattering)
     auto material_view = this->material_track().make_material_view();
     auto cutoffs = this->cutoff_params()->get(MaterialId{0});
 
-    WokviInteractor interact(model_->host_ref(),
-                             this->particle_track(),
-                             this->direction(),
-                             material_view,
-                             ElementComponentId{0},
-                             cutoffs,
-                             this->secondary_allocator());
+    WentzelInteractor interact(model_->host_ref(),
+                               this->particle_track(),
+                               this->direction(),
+                               material_view,
+                               ElementComponentId{0},
+                               cutoffs);
     RandomEngine& rng_engine = this->rng();
 
     std::vector<double> angle;
@@ -255,7 +256,7 @@ TEST_F(CoulombScatteringTest, simple_scattering)
 
 TEST_F(CoulombScatteringTest, distribution)
 {
-    WokviHostRef const& data = model_->host_ref();
+    WentzelHostRef const& data = model_->host_ref();
 
     const real_type energies[] = {50, 100, 200, 1000, 13000};
     for (real_type energy : energies)
@@ -269,31 +270,23 @@ TEST_F(CoulombScatteringTest, distribution)
                   .make_material_view()
                   .make_element_view(ElementComponentId{0})
                   .make_isotope_view(IsotopeComponentId{0});
-        WokviElementData const& element_data = data.elem_data[ElementId(0)];
+        WentzelElementData const& element_data = data.elem_data[ElementId(0)];
         const real_type cutoff_energy = value_as<units::MevEnergy>(
             this->cutoff_params()
                 ->get(MaterialId{0})
                 .energy(this->particle_track().particle_id()));
 
-        WokviDistribution distrib(inc_energy,
-                                  inc_mass,
-                                  isotope,
-                                  element_data,
-                                  cutoff_energy,
-                                  true,
-                                  data);
+        WentzelDistribution distrib(inc_energy,
+                                    inc_mass,
+                                    isotope,
+                                    element_data,
+                                    cutoff_energy,
+                                    true,
+                                    data);
         RandomEngine& rng_engine = this->rng();
 
-        cout << " ##### ENERGY: " << energy << "\n"
-             << "    screening: " << distrib.compute_screening_coefficient()
-             << "\n"
-             << "    elec cos_t: " << distrib.compute_max_electron_cos_t()
-             << "\n"
-             << "    inc_energy_: " << distrib.inc_energy_ << "\n"
-             << "    cutoff_energy_: " << distrib.cutoff_energy_ << "\n"
-             << "\n\n";
-        // EXPECT_SOFT_EQ(0, distrib.compute_screening_coefficient());
-        // EXPECT_SOFT_EQ(0, distrib.compute_max_electron_cos_t());
+        EXPECT_SOFT_EQ(0, distrib.compute_screening_coefficient());
+        EXPECT_SOFT_EQ(0, distrib.compute_max_electron_cos_t());
     }
 
     //     double avg_angle = 0;
