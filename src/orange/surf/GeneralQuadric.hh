@@ -18,6 +18,9 @@
 namespace celeritas
 {
 //---------------------------------------------------------------------------//
+class SimpleQuadric;
+
+//---------------------------------------------------------------------------//
 /*!
  * General quadric surface.
  *
@@ -28,6 +31,9 @@ namespace celeritas
  * \f[
     ax^2 + by^2 + cz^2 + dxy + eyz + fzx + gx + hy + iz + j = 0
    \f]
+ *
+ * Note that some formulations of a general quadric include a factor of 2 for
+ * the g/h/i terms.
  */
 class GeneralQuadric
 {
@@ -35,7 +41,8 @@ class GeneralQuadric
     //@{
     //! Type aliases
     using Intersections = Array<real_type, 2>;
-    using Storage = Span<const real_type, 10>;
+    using StorageSpan = Span<const real_type, 10>;
+    using Storage = StorageSpan;  // DEPRECATED
     using SpanConstReal3 = Span<const real_type, 3>;
     //@}
 
@@ -61,6 +68,9 @@ class GeneralQuadric
 
     // Construct from raw data
     explicit inline CELER_FUNCTION GeneralQuadric(Storage);
+
+    // Promote from a simple quadric
+    explicit GeneralQuadric(SimpleQuadric const& other) noexcept;
 
     //// ACCESSORS ////
 
@@ -107,6 +117,8 @@ class GeneralQuadric
 //---------------------------------------------------------------------------//
 /*!
  * Construct with all coefficients.
+ *
+ * TODO: normalize?
  */
 CELER_FUNCTION GeneralQuadric::GeneralQuadric(Real3 const& abc,
                                               Real3 const& def,
@@ -123,6 +135,8 @@ CELER_FUNCTION GeneralQuadric::GeneralQuadric(Real3 const& abc,
     , i_(ghi[2])
     , j_(j)
 {
+    CELER_EXPECT(a_ != 0 || b_ != 0 || c_ != 0 || d_ != 0 || e_ != 0 || f_ != 0
+                 || g_ != 0 || h_ != 0 || i_ != 0);
 }
 
 //---------------------------------------------------------------------------//

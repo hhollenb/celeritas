@@ -25,6 +25,9 @@ namespace celeritas
  * \f[
     (y - y_0)^2 + (z - z_0)^2 - t^2 (x - x_0)^2 = 0
    \f]
+
+ * where \em t is the tangent of the opening angle (\f$r/h\f$ for a finite cone
+ * with radius \em r and height \em h).
  */
 template<Axis T>
 class ConeAligned
@@ -33,7 +36,8 @@ class ConeAligned
     //@{
     //! \name Type aliases
     using Intersections = Array<real_type, 2>;
-    using Storage = Span<const real_type, 4>;
+    using StorageSpan = Span<const real_type, 4>;
+    using Storage = StorageSpan;  // DEPRECATED
     //@}
 
   private:
@@ -59,6 +63,9 @@ class ConeAligned
   public:
     //// CONSTRUCTORS ////
 
+    // Construct with square of tangent for simplification
+    static ConeAligned from_tangent_sq(Real3 const& origin, real_type tsq);
+
     // Construct from origin and tangent of the angle of its opening
     inline CELER_FUNCTION ConeAligned(Real3 const& origin, real_type tangent);
 
@@ -70,7 +77,7 @@ class ConeAligned
     //! Get the origin position along the normal axis
     CELER_FUNCTION Real3 const& origin() const { return origin_; }
 
-    //! Get the square of the tangent
+    //! Get the square of the tangent of the opening angle
     CELER_FUNCTION real_type tangent_sq() const { return tsq_; }
 
     //! Get a view to the data for type-deleted storage
@@ -94,6 +101,9 @@ class ConeAligned
 
     // Quadric value
     real_type tsq_;
+
+    //! Private default constructor for manual construction
+    ConeAligned() = default;
 };
 
 //---------------------------------------------------------------------------//
@@ -123,23 +133,25 @@ CELER_CONSTEXPR_FUNCTION SurfaceType ConeAligned<T>::surface_type()
 /*!
  * Construct from origin and tangent of the angle of its opening.
  *
- * Given the triangular cross section of one octant of a finite cone (i.e. a
- * right triangle), the tangent is the slope of its hypotenuse (height / base).
+ * Given a finite cone, the tangent is the ratio of its base radius to its
+ * height.
  *
- * \pre
-     b
+ * In the cone, below, the tangent of the inner angle
+ * \f$ \tan(\theta) = r/h \f$ is the second argument.
+ * \verbatim
+     r
    +-------*
    |   _--^
  h |_--
    O
-   \endpre
+   \endverbatim
  */
 template<Axis T>
 CELER_FUNCTION
 ConeAligned<T>::ConeAligned(Real3 const& origin, real_type tangent)
     : origin_{origin}, tsq_{ipow<2>(tangent)}
 {
-    CELER_EXPECT(tangent >= 0);
+    CELER_EXPECT(tangent > 0);
 }
 
 //---------------------------------------------------------------------------//

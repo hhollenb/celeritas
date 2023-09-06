@@ -60,6 +60,8 @@ list(APPEND SOURCES
   phys/ParticleParamsOutput.cc
   phys/PhysicsParams.cc
   phys/PhysicsParamsOutput.cc
+  phys/PrimaryGenerator.cc
+  phys/PrimaryGeneratorOptions.cc
   phys/Process.cc
   phys/ProcessBuilder.cc
   random/CuHipRngData.cc
@@ -194,6 +196,8 @@ if(CELERITAS_USE_ROOT)
     ext/RootUniquePtr.root.cc
     ext/RootFileManager.cc
     user/RootStepWriter.cc
+    io/RootEventReader.cc
+    io/RootEventWriter.cc
     "${CMAKE_CURRENT_BINARY_DIR}/CeleritasRootInterface.cxx"
   )
 

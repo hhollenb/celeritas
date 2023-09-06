@@ -30,12 +30,14 @@ namespace detail
 template<MemSpace M,
          typename Size,
          typename = std::enable_if_t<std::is_unsigned_v<Size>>>
-void fill_track_slots(Span<Size> track_slots);
+void fill_track_slots(Span<Size> track_slots, StreamId);
 
 template<>
-void fill_track_slots<MemSpace::host>(Span<TrackSlotId::size_type> track_slots);
+void fill_track_slots<MemSpace::host>(Span<TrackSlotId::size_type> track_slots,
+                                      StreamId);
 template<>
-void fill_track_slots<MemSpace::device>(Span<TrackSlotId::size_type> track_slots);
+void fill_track_slots<MemSpace::device>(Span<TrackSlotId::size_type> track_slots,
+                                        StreamId);
 
 //---------------------------------------------------------------------------//
 // Shuffle tracks
@@ -43,14 +45,14 @@ void fill_track_slots<MemSpace::device>(Span<TrackSlotId::size_type> track_slots
 template<MemSpace M,
          typename Size,
          typename = std::enable_if_t<std::is_unsigned_v<Size>>>
-void shuffle_track_slots(Span<Size> track_slots);
+void shuffle_track_slots(Span<Size> track_slots, StreamId);
 
 template<>
 void shuffle_track_slots<MemSpace::host>(
-    Span<TrackSlotId::size_type> track_slots);
+    Span<TrackSlotId::size_type> track_slots, StreamId);
 template<>
 void shuffle_track_slots<MemSpace::device>(
-    Span<TrackSlotId::size_type> track_slots);
+    Span<TrackSlotId::size_type> track_slots, StreamId);
 
 //---------------------------------------------------------------------------//
 // Sort or partition tracks
@@ -87,17 +89,7 @@ struct alive_predicate
     }
 };
 
-struct step_limit_comparator
-{
-    ObserverPtr<StepLimit const> step_limit_;
-
-    CELER_FUNCTION bool operator()(unsigned int a, unsigned int b) const
-    {
-        return step_limit_.get()[a].action < step_limit_.get()[b].action;
-    }
-};
-
-struct along_action_comparator
+struct action_comparator
 {
     ObserverPtr<ActionId const> action_;
 
@@ -107,25 +99,14 @@ struct along_action_comparator
     }
 };
 
-struct StepLimitActionAccessor
+struct ActionAccessor
 {
-    ObserverPtr<StepLimit const> step_limit_;
+    ObserverPtr<ActionId const> action_;
     ObserverPtr<TrackSlotId::size_type const> track_slots_;
 
     CELER_FUNCTION ActionId operator()(ThreadId tid) const
     {
-        return step_limit_.get()[track_slots_.get()[tid.get()]].action;
-    }
-};
-
-struct AlongStepActionAccessor
-{
-    ObserverPtr<ActionId const> along_step_;
-    ObserverPtr<TrackSlotId::size_type const> track_slots_;
-
-    CELER_FUNCTION ActionId operator()(ThreadId tid) const
-    {
-        return along_step_.get()[track_slots_.get()[tid.get()]];
+        return action_.get()[track_slots_.get()[tid.get()]];
     }
 };
 
@@ -134,13 +115,15 @@ struct AlongStepActionAccessor
 //---------------------------------------------------------------------------//
 #if !CELER_USE_DEVICE
 template<>
-inline void fill_track_slots<MemSpace::device>(Span<TrackSlotId::size_type>)
+inline void
+fill_track_slots<MemSpace::device>(Span<TrackSlotId::size_type>, StreamId)
 {
     CELER_NOT_CONFIGURED("CUDA or HIP");
 }
 
 template<>
-inline void shuffle_track_slots<MemSpace::device>(Span<TrackSlotId::size_type>)
+inline void
+shuffle_track_slots<MemSpace::device>(Span<TrackSlotId::size_type>, StreamId)
 {
     CELER_NOT_CONFIGURED("CUDA or HIP");
 }

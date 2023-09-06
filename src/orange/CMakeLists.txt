@@ -13,6 +13,7 @@ set(PUBLIC_DEPS Celeritas::corecel)
 #-----------------------------------------------------------------------------#
 
 list(APPEND SOURCES
+  BoundingBoxUtils.cc
   MatrixUtils.cc
   OrangeParams.cc
   OrangeTypes.cc
@@ -21,8 +22,20 @@ list(APPEND SOURCES
   detail/BIHPartitioner.cc
   detail/RectArrayInserter.cc
   detail/UnitInserter.cc
+  surf/ConeAligned.cc
+  surf/CylAligned.cc
+  surf/GeneralQuadric.cc
+  surf/Plane.cc
+  surf/SimpleQuadric.cc
+  surf/Sphere.cc
   surf/SurfaceIO.cc
+  surf/SurfaceSimplifier.cc
+  surf/VariantSurface.cc
+  surf/detail/SurfaceClipperImpl.cc
+  surf/detail/SurfaceTranslator.cc
+  surf/detail/SurfaceTransformer.cc
   transform/Transformation.cc
+  transform/VariantTransform.cc
 )
 
 if(CELERITAS_USE_JSON)

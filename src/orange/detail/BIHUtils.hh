@@ -3,7 +3,7 @@
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
-//! \file orange/BIHUtils.hh
+//! \file orange/detail/BIHUtils.hh
 //---------------------------------------------------------------------------//
 #pragma once
 
@@ -17,7 +17,7 @@ namespace celeritas
 /*!
  * Calculate bounding box enclosing bounding boxes for specified indices.
  */
-inline FastBBox bbox_union(std::vector<FastBBox> const& bboxes,
+inline FastBBox calc_union(std::vector<FastBBox> const& bboxes,
                            std::vector<LocalVolumeId> const& indices)
 {
     CELER_EXPECT(!bboxes.empty());
@@ -28,7 +28,7 @@ inline FastBBox bbox_union(std::vector<FastBBox> const& bboxes,
     ++id;
     for (; id != indices.end(); ++id)
     {
-        result = bbox_union(result, bboxes[id->unchecked_get()]);
+        result = calc_union(result, bboxes[id->unchecked_get()]);
     }
 
     return result;

@@ -112,6 +112,36 @@ struct Less<void>
 // Replace/extend <algorithm>
 //---------------------------------------------------------------------------//
 /*!
+ * Whether the predicate is true for all items.
+ */
+template<class InputIt, class Predicate>
+inline CELER_FUNCTION bool all_of(InputIt iter, InputIt last, Predicate p)
+{
+    for (; iter != last; ++iter)
+    {
+        if (!p(*iter))
+            return false;
+    }
+    return true;
+}
+
+//---------------------------------------------------------------------------//
+/*!
+ * Whether the predicate is true for any item.
+ */
+template<class InputIt, class Predicate>
+inline CELER_FUNCTION bool any_of(InputIt iter, InputIt last, Predicate p)
+{
+    for (; iter != last; ++iter)
+    {
+        if (p(*iter))
+            return true;
+    }
+    return false;
+}
+
+//---------------------------------------------------------------------------//
+/*!
  * Clamp the value between lo and hi values.
  *
  * If the value is between lo and hi, return the value. Otherwise, return lo if
@@ -435,6 +465,16 @@ CELER_CONSTEXPR_FUNCTION T ceil_div(T top, T bottom)
 {
     static_assert(std::is_unsigned<T>::value, "Value is not an unsigned int");
     return (top / bottom) + (top % bottom != 0);
+}
+
+//---------------------------------------------------------------------------//
+/*!
+ * Negation that won't return signed zeros.
+ */
+template<class T>
+[[nodiscard]] CELER_CONSTEXPR_FUNCTION T negate(T value)
+{
+    return T{0} - value;
 }
 
 //---------------------------------------------------------------------------//

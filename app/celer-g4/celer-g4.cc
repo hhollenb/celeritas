@@ -18,6 +18,10 @@
 #include <G4UImanager.hh>
 #include <G4Version.hh>
 
+#include "accel/HepMC3PrimaryGenerator.hh"
+
+#include "GlobalSetup.hh"
+
 #if G4VERSION_NUMBER >= 1100
 #    include <G4RunManagerFactory.hh>
 #else
@@ -32,6 +36,7 @@
 #include "corecel/Assert.hh"
 #include "corecel/Macros.hh"
 #include "corecel/io/Logger.hh"
+#include "corecel/io/StringUtils.hh"
 #include "corecel/sys/Environment.hh"
 #include "corecel/sys/TypeDemangler.hh"
 #include "celeritas/ext/GeantPhysicsOptions.hh"
@@ -43,7 +48,8 @@
 #include "ActionInitialization.hh"
 #include "DetectorConstruction.hh"
 #include "GlobalSetup.hh"
-#include "PrimaryGeneratorAction.hh"
+#include "HepMC3PrimaryGeneratorAction.hh"
+#include "PGPrimaryGeneratorAction.hh"
 
 using namespace std::literals::string_view_literals;
 
@@ -80,23 +86,31 @@ void run(int argc, char** argv)
     CELER_LOG(info) << "Run manager type: "
                     << TypeDemangler<G4RunManager>{}(*run_manager);
 
-    // Make global setup commands available to UI
+    // Construct singleton, also making it available to UI
     GlobalSetup::Instance();
 
-    G4UImanager* ui = G4UImanager::GetUIpointer();
-    CELER_ASSERT(ui);
-    std::string_view macro_filename{argv[1]};
-    if (macro_filename == "--interactive")
+    // Read user input
+    std::string_view filename{argv[1]};
+    if (filename == "--interactive")
     {
         G4UIExecutive exec(argc, argv);
         exec.SessionStart();
         return;
     }
-
-    CELER_LOG(status) << "Executing macro commands from '" << macro_filename
-                      << "'";
-    ui->ApplyCommand(std::string("/control/execute ")
-                     + std::string(macro_filename));
+    if (ends_with(filename, ".mac"sv))
+    {
+        CELER_LOG(status) << "Executing macro commands from '" << filename
+                          << "'";
+        G4UImanager* ui = G4UImanager::GetUIpointer();
+        CELER_ASSERT(ui);
+        ui->ApplyCommand(std::string("/control/execute ")
+                         + std::string(filename));
+    }
+    else
+    {
+        CELER_LOG(status) << "Reading JSON input from '" << filename << "'";
+        GlobalSetup::Instance()->ReadInput(std::string(filename));
+    }
 
     std::vector<std::string> ignore_processes = {"CoulombScat"};
     if (G4VERSION_NUMBER >= 1110)
@@ -110,24 +124,27 @@ void run(int argc, char** argv)
 
     // Construct geometry, SD factory, physics, actions
     run_manager->SetUserInitialization(new DetectorConstruction{});
-    if (GlobalSetup::Instance()->GetPhysicsList() == "FTFP_BERT")
+    switch (GlobalSetup::Instance()->GetPhysicsList())
     {
-        run_manager->SetUserInitialization(new FTFP_BERT{/* verbosity = */ 0});
-    }
-    else if (GlobalSetup::Instance()->GetPhysicsList() == "GeantPhysicsList")
-    {
-        GeantPhysicsOptions opts;
-        if (std::find(ignore_processes.begin(), ignore_processes.end(), "Rayl")
-            != ignore_processes.end())
-        {
-            opts.rayleigh_scattering = false;
+        case PhysicsListSelection::ftfp_bert: {
+            run_manager->SetUserInitialization(
+                new FTFP_BERT{/* verbosity = */ 0});
+            break;
         }
-        run_manager->SetUserInitialization(new detail::GeantPhysicsList{opts});
-    }
-    else
-    {
-        CELER_LOG(error) << "Unknown physics list '"
-                         << GlobalSetup::Instance()->GetPhysicsList() << "'";
+        case PhysicsListSelection::geant_physics_list: {
+            auto opts = GlobalSetup::Instance()->GetPhysicsOptions();
+            if (std::find(
+                    ignore_processes.begin(), ignore_processes.end(), "Rayl")
+                != ignore_processes.end())
+            {
+                opts.rayleigh_scattering = false;
+            }
+            run_manager->SetUserInitialization(
+                new detail::GeantPhysicsList{opts});
+            break;
+        }
+        default:
+            CELER_ASSERT_UNREACHABLE();
     }
     run_manager->SetUserInitialization(new ActionInitialization());
 
@@ -135,10 +152,18 @@ void run(int argc, char** argv)
     CELER_LOG(status) << "Initializing run manager";
     run_manager->Initialize();
 
-    // Load the input file
     int num_events{0};
-    CELER_TRY_HANDLE(num_events = PrimaryGeneratorAction::NumEvents(),
-                     ExceptionConverter{"demo-geant000"});
+    if (!GlobalSetup::Instance()->GetEventFile().empty())
+    {
+        // Load the input file
+        CELER_TRY_HANDLE(num_events = HepMC3PrimaryGeneratorAction::NumEvents(),
+                         ExceptionConverter{"celer-g4000"});
+    }
+    else
+    {
+        num_events
+            = GlobalSetup::Instance()->GetPrimaryGeneratorOptions().num_events;
+    }
 
     if (!celeritas::getenv("CELER_DISABLE").empty())
     {
@@ -164,7 +189,8 @@ int main(int argc, char* argv[])
 {
     if (argc != 2 || argv[1] == "--help"sv || argv[1] == "-h"sv)
     {
-        std::cerr << "usage: " << argv[0] << " {commands}.mac\n"
+        std::cerr << "usage: " << argv[0] << " {input}.json\n"
+                  << "       " << argv[0] << " {commands}.mac\n"
                   << "       " << argv[0] << " --interactive\n"
                   << "Environment variables:\n"
                   << "  G4FORCE_RUN_MANAGER_TYPE: MT or Serial\n"

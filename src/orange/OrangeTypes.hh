@@ -10,6 +10,7 @@
 
 #include <cstddef>
 #include <functional>
+#include <type_traits>
 #include <utility>
 
 #include "corecel/Macros.hh"
@@ -17,13 +18,16 @@
 #include "corecel/Types.hh"
 #include "corecel/cont/Array.hh"
 #include "corecel/math/NumericLimits.hh"
-#include "orange/BoundingBox.hh"
 #include "orange/Types.hh"
 
 #include "Types.hh"  // IWYU pragma: export
 
 namespace celeritas
 {
+//---------------------------------------------------------------------------//
+template<class T>
+class BoundingBox;
+
 //---------------------------------------------------------------------------//
 // TYPE ALIASES
 //---------------------------------------------------------------------------//
@@ -34,14 +38,20 @@ using fast_real_type = float;
 //! Integer type for volume CSG tree representation
 using logic_int = unsigned short int;
 
+//! Helper class for some template dispatch functions
+template<Axis T>
+using AxisTag = std::integral_constant<Axis, T>;
+
+//// ID TYPES ////
+
 //! Identifier for a BIHNode objects
-using BIHNodeId = OpaqueId<struct BIHNode>;
+using BIHNodeId = OpaqueId<struct BIHNode_>;
 
 //! Identifier for a daughter universe
 using DaughterId = OpaqueId<struct Daughter>;
 
 //! Identifier for a face within a volume
-using FaceId = OpaqueId<struct Face>;
+using FaceId = OpaqueId<struct Face_>;
 
 //! Bounding box used for acceleration
 using FastBBox = BoundingBox<fast_real_type>;
@@ -50,13 +60,13 @@ using FastBBox = BoundingBox<fast_real_type>;
 using FastBBoxId = OpaqueId<FastBBox>;
 
 //! Identifier for the current "level", i.e., depth of embedded universe
-using LevelId = OpaqueId<struct Level>;
+using LevelId = OpaqueId<struct Level_>;
 
 //! Local identifier for a surface within a universe
-using LocalSurfaceId = OpaqueId<struct LocalSurface>;
+using LocalSurfaceId = OpaqueId<struct LocalSurface_>;
 
 //! Local identifier for a geometry volume within a universe
-using LocalVolumeId = OpaqueId<struct LocalVolume>;
+using LocalVolumeId = OpaqueId<struct LocalVolume_>;
 
 //! Opaque index for "simple unit" data
 using SimpleUnitId = OpaqueId<struct SimpleUnitRecord>;
@@ -65,10 +75,10 @@ using SimpleUnitId = OpaqueId<struct SimpleUnitRecord>;
 using RectArrayId = OpaqueId<struct RectArrayRecord>;
 
 //! Identifier for a translation of a single embedded universe
-using TranslationId = OpaqueId<Real3>;
+using TransformId = OpaqueId<struct TransformRecord>;
 
 //! Identifier for a relocatable set of volumes
-using UniverseId = OpaqueId<struct Universe>;
+using UniverseId = OpaqueId<struct Universe_>;
 
 //---------------------------------------------------------------------------//
 // ENUMERATIONS
@@ -95,7 +105,7 @@ enum class Sense : bool
  * Enumeration for mapping surface classes to integers.
  *
  * These are ordered by number of coefficients needed for their representation:
- * 1 for `[ps].|c.o`, 3 for `c.`, 4 for `[ps]|k.`, 7 for `sq`, and 10 for `gq`.
+ * 1 for `p.|sc|c.c`, 3 for `c.`, 4 for `[ps]|k.`, 7 for `sq`, and 10 for `gq`.
  *
  * See \c orange/surf/SurfaceTypeTraits.hh for how these map to classes.
  */
@@ -127,6 +137,7 @@ enum class SurfaceType : unsigned char
  */
 enum class TransformType : unsigned char
 {
+    no_transformation,  //!< Identity transform
     translation,  //!< Translation only
     transformation,  //!< Translation plus rotation
     size_
@@ -233,7 +244,7 @@ enum OperatorToken : logic_int
 struct Daughter
 {
     UniverseId universe_id;
-    TranslationId translation_id;
+    TransformId transform_id;
 };
 
 //---------------------------------------------------------------------------//
@@ -251,7 +262,7 @@ CELER_CONSTEXPR_FUNCTION Sense to_sense(bool s)
 /*!
  * Change the sense across a surface.
  */
-CELER_CONSTEXPR_FUNCTION Sense flip_sense(Sense orig)
+[[nodiscard]] CELER_CONSTEXPR_FUNCTION Sense flip_sense(Sense orig)
 {
     return static_cast<Sense>(!static_cast<bool>(orig));
 }
@@ -260,7 +271,8 @@ CELER_CONSTEXPR_FUNCTION Sense flip_sense(Sense orig)
 /*!
  * Change whether a boundary crossing is reentrant or exiting.
  */
-CELER_CONSTEXPR_FUNCTION BoundaryResult flip_boundary(BoundaryResult orig)
+[[nodiscard]] CELER_CONSTEXPR_FUNCTION BoundaryResult
+flip_boundary(BoundaryResult orig)
 {
     return static_cast<BoundaryResult>(!static_cast<bool>(orig));
 }
@@ -285,7 +297,8 @@ CELER_CONSTEXPR_FUNCTION BoundaryResult flip_boundary(BoundaryResult orig)
  *
  * NaN values are treated as "outside".
  */
-CELER_CONSTEXPR_FUNCTION SignedSense real_to_sense(real_type quadric)
+[[nodiscard]] CELER_CONSTEXPR_FUNCTION SignedSense
+real_to_sense(real_type quadric)
 {
     return static_cast<SignedSense>(!(quadric <= 0) - (quadric < 0));
 }
