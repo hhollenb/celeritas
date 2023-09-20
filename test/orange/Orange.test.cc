@@ -5,8 +5,13 @@
 //---------------------------------------------------------------------------//
 //! \file orange/Orange.test.cc
 //---------------------------------------------------------------------------//
+#include <limits>
+#include <type_traits>
+
+#include "corecel/math/Algorithms.hh"
 #include "orange/OrangeParams.hh"
 #include "orange/OrangeTrackView.hh"
+#include "orange/OrangeTypes.hh"
 #include "orange/Types.hh"
 #include "orange/construct/OrangeInput.hh"
 #include "celeritas/Constants.hh"
@@ -22,6 +27,45 @@ namespace celeritas
 namespace test
 {
 //---------------------------------------------------------------------------//
+
+TEST(OrangeTypes, tolerances)
+{
+    using TolT = Tolerance<>;
+    EXPECT_FALSE(TolT{});
+
+    EXPECT_SOFT_EQ(1e-10, ipow<2>(TolT::sqrt_quadratic()));
+
+    {
+        SCOPED_TRACE("Default tolerance");
+        auto const tol = TolT::from_default();
+        EXPECT_TRUE(tol);
+        EXPECT_SOFT_NEAR(
+            std::sqrt(std::numeric_limits<real_type>::epsilon()), tol.rel, 0.5);
+        EXPECT_SOFT_EQ(tol.rel, tol.abs);
+        if constexpr (std::is_same_v<real_type, double>)
+        {
+            EXPECT_SOFT_EQ(1e-8, tol.rel);
+        }
+    }
+    {
+        SCOPED_TRACE("Tolerance with other length scale");
+        auto const tol = TolT::from_default(1e-4);
+        EXPECT_SOFT_EQ(1e-8, tol.rel);
+        EXPECT_SOFT_EQ(1e-12, tol.abs);
+    }
+    {
+        SCOPED_TRACE("Tolerance with arbitrary relative");
+        auto const tol = TolT::from_relative(1e-5);
+        EXPECT_SOFT_EQ(1e-5, tol.rel);
+        EXPECT_SOFT_EQ(1e-5, tol.abs);
+    }
+    {
+        SCOPED_TRACE("Tolerance with arbitrary relative and length scale");
+        auto const tol = TolT::from_relative(1e-5, 0.1);
+        EXPECT_SOFT_EQ(1e-5, tol.rel);
+        EXPECT_SOFT_EQ(1e-6, tol.abs);
+    }
+}
 
 class OrangeTest : public OrangeGeoTestBase
 {
@@ -81,6 +125,12 @@ class UniversesTest : public OrangeTest
 class RectArrayTest : public OrangeTest
 {
     void SetUp() override { this->build_geometry("rect_array.org.json"); }
+};
+
+#define HexArrayTest TEST_IF_CELERITAS_JSON(HexArrayTest)
+class HexArrayTest : public OrangeTest
+{
+    void SetUp() override { this->build_geometry("hex_array.org.json"); }
 };
 
 #define Geant4Testem15Test TEST_IF_CELERITAS_JSON(Geant4Testem15Test)
@@ -876,6 +926,41 @@ TEST_F(Geant4Testem15Test, safety)
     next = geo.find_next_step();
     geo.move_internal(6.0);
     EXPECT_SOFT_EQ(10.0, geo.find_safety());
+}
+
+TEST_F(HexArrayTest, track_out)
+{
+    OrangeTrackView geo = this->make_track_view();
+
+    // Initialize
+    Real3 pos
+        = {-6.9258369494022292, -4.9982766629573767, -10.8378536157757495};
+    Real3 dir = {0.6750034206933703, -0.3679917428721818, 0.6394939086732125};
+
+    geo = Initializer_t{pos, dir};
+
+    std::vector<celeritas::VolumeId> vids;
+    std::vector<celeritas::VolumeId> refids = {celeritas::VolumeId{2},
+                                               celeritas::VolumeId{55},
+                                               celeritas::VolumeId{57},
+                                               celeritas::VolumeId{2}};
+
+    std::vector<double> d2b;
+    std::vector<double> refd2b = {1.99143, 5.30607, 0.306368, 5.98808};
+
+    while (!geo.is_outside())
+    {
+        vids.push_back(geo.volume_id());
+
+        auto next = geo.find_next_step();
+        d2b.push_back(next.distance);
+
+        geo.move_to_boundary();
+        geo.cross_boundary();
+    }
+
+    EXPECT_VEC_EQ(refids, vids);
+    EXPECT_VEC_CLOSE(d2b, refd2b, 1e-5, 1e-5);
 }
 
 //---------------------------------------------------------------------------//

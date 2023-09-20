@@ -17,6 +17,8 @@
 
 namespace celeritas
 {
+namespace detail
+{
 //---------------------------------------------------------------------------//
 /*!
  * Scale SB differential cross sections for positrons.
@@ -137,17 +139,12 @@ CELER_FUNCTION real_type SBPositronXsCorrector::operator()(Energy energy) const
    = 1/\sqrt{1 - \left( \frac{mc^2}{K + mc^2} \right)^2}
    = 1 / \beta(K)
  * \f]
- *
- * \todo I originally wanted all these sort of calculations to be in
- * ParticleTrackView, but that class requires a full set of state, params, etc.
- * Maybe we need to refactor it so that this calculation doesn't get duplicated
- * everywhere inside the physics -- maybe a "LocalParticle" that has the same
- * functions.
  */
 CELER_FUNCTION real_type
 SBPositronXsCorrector::calc_invbeta(real_type gamma_energy) const
 {
     CELER_EXPECT(gamma_energy > 0 && gamma_energy < inc_energy_);
+    // TODO: use local data ParticleTrackView
     // Positron has all the energy except what it gave to the gamma
     real_type energy = inc_energy_ - gamma_energy;
     return (energy + positron_mass_)
@@ -155,4 +152,5 @@ SBPositronXsCorrector::calc_invbeta(real_type gamma_energy) const
 }
 
 //---------------------------------------------------------------------------//
+}  // namespace detail
 }  // namespace celeritas

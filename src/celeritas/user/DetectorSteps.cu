@@ -17,7 +17,7 @@
 #include "corecel/sys/Device.hh"
 #include "corecel/sys/KernelParamCalculator.device.hh"
 #include "corecel/sys/Stream.hh"
-#include "celeritas/ext/Thrust.device.hh"
+#include "corecel/sys/Thrust.device.hh"
 
 #include "StepData.hh"
 
@@ -120,7 +120,10 @@ struct HasDetector
 
 //---------------------------------------------------------------------------//
 template<class T>
-void copy_field(std::vector<T>* dst, StateRef<T> const& src, size_type num_valid)
+void copy_field(DetectorStepOutput::vector<T>* dst,
+                StateRef<T> const& src,
+                size_type num_valid,
+                StreamId stream)
 {
     if (src.empty() || num_valid == 0)
     {
@@ -129,9 +132,8 @@ void copy_field(std::vector<T>* dst, StateRef<T> const& src, size_type num_valid
         return;
     }
     dst->resize(num_valid);
-
     // Copy all items from valid threads
-    Copier<T, MemSpace::host> copy{{dst->data(), num_valid}};
+    Copier<T, MemSpace::host> copy{{dst->data(), num_valid}, stream};
     copy(MemSpace::device, {src.data().get(), num_valid});
 }
 
@@ -167,7 +169,8 @@ void copy_steps<MemSpace::device>(
 
     // Resize and copy if the fields are present
 #define DS_ASSIGN(FIELD) \
-    copy_field(&(output->FIELD), state.scratch.FIELD, num_valid)
+    copy_field(          \
+        &(output->FIELD), state.scratch.FIELD, num_valid, state.stream_id)
 
     DS_ASSIGN(detector);
     DS_ASSIGN(track_id);
@@ -187,6 +190,10 @@ void copy_steps<MemSpace::device>(
     DS_ASSIGN(particle);
     DS_ASSIGN(energy_deposition);
 #undef DS_ASSIGN
+
+    // Copies must be complete before returning
+    CELER_DEVICE_CALL_PREFIX(
+        StreamSynchronize(celeritas::device().stream(state.stream_id).get()));
 
     CELER_ENSURE(output->detector.size() == num_valid);
     CELER_ENSURE(output->track_id.size() == num_valid);

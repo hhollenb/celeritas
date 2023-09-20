@@ -19,13 +19,12 @@
 #include "corecel/Macros.hh"
 #include "corecel/data/Collection.hh"
 #include "corecel/data/Copier.hh"
-#include "corecel/data/DeviceVector.hh"
 #include "corecel/data/ObserverPtr.device.hh"
 #include "corecel/data/ObserverPtr.hh"
 #include "corecel/sys/Device.hh"
 #include "corecel/sys/KernelParamCalculator.device.hh"
 #include "corecel/sys/Stream.hh"
-#include "celeritas/ext/Thrust.device.hh"
+#include "corecel/sys/Thrust.device.hh"
 
 namespace celeritas
 {
@@ -78,20 +77,26 @@ void sort_impl(TrackSlots const& track_slots,
                ObserverPtr<ActionId const> actions,
                StreamId stream_id)
 {
-    DeviceVector<ActionId::size_type> reordered_actions(track_slots.size());
+    auto stream = celeritas::device().stream(stream_id).get();
+    ActionId::size_type* reordered_actions;
+    // TODO: Replace with stream-aware container
+    CELER_DEVICE_CALL_PREFIX(
+        MallocAsync(&reordered_actions,
+                    sizeof(ActionId::size_type) * track_slots.size(),
+                    stream));
     CELER_LAUNCH_KERNEL(reorder_actions,
                         celeritas::device().default_block_size(),
                         track_slots.size(),
-                        celeritas::device().stream(stream_id).get(),
+                        stream,
                         track_slots.data(),
                         actions,
-                        make_observer(reordered_actions.data()),
+                        make_observer(reordered_actions),
                         track_slots.size());
-    auto start = reordered_actions.data();
     thrust::sort_by_key(thrust_execute_on(stream_id),
-                        start,
-                        start + reordered_actions.size(),
+                        reordered_actions,
+                        reordered_actions + track_slots.size(),
                         device_pointer_cast(track_slots.data()));
+    CELER_DEVICE_CALL_PREFIX(FreeAsync(reordered_actions, stream));
     CELER_DEVICE_CHECK_ERROR();
 }
 
@@ -234,17 +239,22 @@ void count_tracks_per_action(
                      start + offsets.size(),
                      ThreadId{});
         CELER_DEVICE_CHECK_ERROR();
+        auto* stream = celeritas::device().stream(states.stream_id).get();
         CELER_LAUNCH_KERNEL(tracks_per_action,
                             celeritas::device().default_block_size(),
                             states.size(),
-                            celeritas::device().stream(states.stream_id).get(),
+                            stream,
                             states,
                             offsets,
                             states.size(),
                             order);
+
         Span<ThreadId> sout = out[AllItems<ThreadId, MemSpace::host>{}];
-        Copier<ThreadId, MemSpace::host> copy_to_host{sout};
+        Copier<ThreadId, MemSpace::host> copy_to_host{sout, states.stream_id};
         copy_to_host(MemSpace::device, offsets);
+
+        // Copies must be complete before backfilling
+        CELER_DEVICE_CALL_PREFIX(StreamSynchronize(stream));
         backfill_action_count(sout, states.size());
     }
 }

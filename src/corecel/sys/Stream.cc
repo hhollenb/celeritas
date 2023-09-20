@@ -17,14 +17,13 @@
 
 namespace celeritas
 {
-
 //---------------------------------------------------------------------------//
 /*!
  * Allocate device memory.
  */
 template<class Pointer>
 auto AsyncMemoryResource<Pointer>::do_allocate(
-    [[maybe_unused]] std::size_t bytes, std::size_t) -> pointer
+    CELER_UNUSED_UNLESS_DEVICE std::size_t bytes, std::size_t) -> pointer
 {
     void* ret;
     CELER_DEVICE_CALL_PREFIX(MallocAsync(&ret, bytes, stream_));
@@ -36,9 +35,8 @@ auto AsyncMemoryResource<Pointer>::do_allocate(
  * Deallocate device memory.
  */
 template<class Pointer>
-void AsyncMemoryResource<Pointer>::do_deallocate([[maybe_unused]] pointer p,
-                                                 std::size_t,
-                                                 std::size_t)
+void AsyncMemoryResource<Pointer>::do_deallocate(
+    CELER_UNUSED_UNLESS_DEVICE pointer p, std::size_t, std::size_t)
 {
     try
     {
@@ -67,6 +65,13 @@ void AsyncMemoryResource<Pointer>::do_deallocate([[maybe_unused]] pointer p,
 Stream::Stream() : memory_resource_(stream_)
 {
     CELER_DEVICE_CALL_PREFIX(StreamCreate(&stream_));
+#if CUDART_VERSION >= 12000
+    unsigned long long stream_id = -1;
+    CELER_CUDA_CALL(cudaStreamGetId(stream_, &stream_id));
+    CELER_LOG_LOCAL(debug) << "Created stream ID " << stream_id;
+#else
+    CELER_LOG_LOCAL(debug) << "Created stream  " << static_cast<void*>(stream_);
+#endif
 }
 
 //---------------------------------------------------------------------------//
@@ -80,6 +85,8 @@ Stream::~Stream()
         try
         {
             CELER_DEVICE_CALL_PREFIX(StreamDestroy(stream_));
+            CELER_LOG_LOCAL(debug)
+                << "Destroyed stream " << static_cast<void*>(stream_);
         }
         catch (RuntimeError const& e)
         {

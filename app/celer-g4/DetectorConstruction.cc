@@ -45,9 +45,6 @@ DetectorConstruction::DetectorConstruction()
 {
     auto& sd = celeritas::app::GlobalSetup::Instance()->GetSDSetupOptions();
 
-    // Use Celeritas "hit processor" to call back to Geant4 SDs.
-    sd.enabled = true;
-
     // Only call back for nonzero energy depositions: this is currently a
     // global option for all detectors, so if any SDs extract data from tracks
     // with no local energy deposition over the step, it must be set to false.
@@ -87,24 +84,27 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     constexpr bool validate_gdml_schema = false;
     gdml_parser.Read(filename, validate_gdml_schema);
 
-    // Find sensitive detectors
-    for (auto const& lv_vecaux : *gdml_parser.GetAuxMap())
+    auto& sd = celeritas::app::GlobalSetup::Instance()->GetSDSetupOptions();
+    if (sd.enabled)
     {
-        for (G4GDMLAuxStructType const& aux : lv_vecaux.second)
+        // Find sensitive detectors
+        for (auto const& lv_vecaux : *gdml_parser.GetAuxMap())
         {
-            if (aux.type == "SensDet")
+            for (G4GDMLAuxStructType const& aux : lv_vecaux.second)
             {
-                detectors_.insert({aux.value, lv_vecaux.first});
+                if (aux.type == "SensDet")
+                {
+                    detectors_.insert({aux.value, lv_vecaux.first});
+                }
             }
         }
-    }
 
-    if (detectors_.empty())
-    {
-        CELER_LOG(warning) << "No sensitive detectors were found in the GDML "
-                              "file";
-        auto& sd = celeritas::app::GlobalSetup::Instance()->GetSDSetupOptions();
-        sd.enabled = false;
+        if (detectors_.empty())
+        {
+            CELER_LOG(warning) << "No sensitive detectors were found in the "
+                                  "GDML file";
+            sd.enabled = false;
+        }
     }
 
     // Setup options for the magnetic field
@@ -138,14 +138,14 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
         {
             CELER_LOG_LOCAL(info)
                 << "Using a uniform field (0, 0, " << field[2] << ") in tesla";
+            mag_field_ = std::make_shared<G4UniformMagField>(
+                convert_to_geant(field, CLHEP::tesla));
         }
-        mag_field_ = std::make_shared<G4UniformMagField>(
-            convert_to_geant(field, CLHEP::tesla));
 
         // Convert field units from tesla to native celeritas units
         for (real_type& v : field)
         {
-            v /= units::tesla;
+            v *= units::tesla;
         }
 
         UniformFieldParams input;
@@ -166,6 +166,27 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
 //---------------------------------------------------------------------------//
 void DetectorConstruction::ConstructSDandField()
 {
+    if (mag_field_)
+    {
+        // Create the chord finder with the driver parameters
+        auto const& field_options = GlobalSetup::Instance()->GetFieldOptions();
+        auto chord_finder = std::make_unique<G4ChordFinder>(
+            mag_field_.get(),
+            convert_to_geant(field_options.minimum_step, CLHEP::cm));
+        chord_finder->SetDeltaChord(
+            convert_to_geant(field_options.delta_chord, CLHEP::cm));
+
+        // Construct the magnetic field
+        G4FieldManager* field_manager
+            = G4TransportationManager::GetTransportationManager()
+                  ->GetFieldManager();
+        field_manager->SetDetectorField(mag_field_.get());
+        field_manager->SetChordFinder(chord_finder.release());
+        field_manager->SetMinimumEpsilonStep(field_options.epsilon_step);
+        field_manager->SetDeltaIntersection(
+            convert_to_geant(field_options.delta_intersection, CLHEP::cm));
+    }
+
     if (detectors_.empty())
     {
         return;
@@ -201,23 +222,6 @@ void DetectorConstruction::ConstructSDandField()
         // Hand SD to the manager
         sd_manager->AddNewDetector(detector.release());
     }
-
-    // Create the chord finder with the driver parameters
-    auto const& field_options = GlobalSetup::Instance()->GetFieldOptions();
-    auto chord_finder = std::make_unique<G4ChordFinder>(
-        mag_field_.get(),
-        convert_to_geant(field_options.minimum_step, CLHEP::cm));
-    chord_finder->SetDeltaChord(
-        convert_to_geant(field_options.delta_chord, CLHEP::cm));
-
-    // Construct the magnetic field
-    G4FieldManager* field_manager
-        = G4TransportationManager::GetTransportationManager()->GetFieldManager();
-    field_manager->SetDetectorField(mag_field_.get());
-    field_manager->SetChordFinder(chord_finder.release());
-    field_manager->SetMinimumEpsilonStep(field_options.epsilon_step);
-    field_manager->SetDeltaIntersection(
-        convert_to_geant(field_options.delta_intersection, CLHEP::cm));
 }
 
 //---------------------------------------------------------------------------//
