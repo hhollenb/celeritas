@@ -105,7 +105,7 @@ class SimpleUnitTracker
     //// METHODS ////
 
     // Get volumes that have the given surface as a "face" (connectivity)
-    inline CELER_FUNCTION Span<LocalVolumeId const>
+    inline CELER_FUNCTION LdgSpan<LocalVolumeId const>
         get_neighbors(LocalSurfaceId) const;
 
     template<class F>
@@ -336,13 +336,13 @@ SimpleUnitTracker::normal(Real3 const& pos, LocalSurfaceId surf) const -> Real3
  * Get volumes that have the given surface as a "face" (connectivity).
  */
 CELER_FUNCTION auto SimpleUnitTracker::get_neighbors(LocalSurfaceId surf) const
-    -> Span<LocalVolumeId const>
+    -> LdgSpan<LocalVolumeId const>
 {
     CELER_EXPECT(surf < this->num_surfaces());
 
-    OpaqueId<Connectivity> conn_id
+    OpaqueId<ConnectivityRecord> conn_id
         = unit_record_.connectivity[surf.unchecked_get()];
-    Connectivity const& conn = params_.connectivities[conn_id];
+    ConnectivityRecord const& conn = params_.connectivity_records[conn_id];
 
     CELER_ENSURE(!conn.neighbors.empty());
     return params_.local_volume_ids[conn.neighbors];
@@ -646,7 +646,7 @@ SimpleUnitTracker::background_intersect(LocalState const& state,
 
 //---------------------------------------------------------------------------//
 /*!
- * Create a Surfaces object from the params for this unit.
+ * Create a surface visitor from the params for this unit.
  */
 CELER_FORCEINLINE_FUNCTION LocalSurfaceVisitor
 SimpleUnitTracker::make_surface_visitor() const

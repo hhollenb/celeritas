@@ -19,6 +19,7 @@
 #include "corecel/Macros.hh"
 #include "corecel/data/Collection.hh"
 #include "corecel/data/Copier.hh"
+#include "corecel/data/DeviceVector.hh"
 #include "corecel/data/ObserverPtr.device.hh"
 #include "corecel/data/ObserverPtr.hh"
 #include "corecel/sys/Device.hh"
@@ -77,26 +78,19 @@ void sort_impl(TrackSlots const& track_slots,
                ObserverPtr<ActionId const> actions,
                StreamId stream_id)
 {
-    auto stream = celeritas::device().stream(stream_id).get();
-    ActionId::size_type* reordered_actions;
-    // TODO: Replace with stream-aware container
-    CELER_DEVICE_CALL_PREFIX(
-        MallocAsync(&reordered_actions,
-                    sizeof(ActionId::size_type) * track_slots.size(),
-                    stream));
+    DeviceVector<ActionId::size_type> reordered_actions(track_slots.size(),
+                                                        stream_id);
     CELER_LAUNCH_KERNEL(reorder_actions,
-                        celeritas::device().default_block_size(),
                         track_slots.size(),
-                        stream,
+                        celeritas::device().stream(stream_id).get(),
                         track_slots.data(),
                         actions,
-                        make_observer(reordered_actions),
+                        make_observer(reordered_actions.data()),
                         track_slots.size());
     thrust::sort_by_key(thrust_execute_on(stream_id),
-                        reordered_actions,
-                        reordered_actions + track_slots.size(),
+                        reordered_actions.data(),
+                        reordered_actions.data() + reordered_actions.size(),
                         device_pointer_cast(track_slots.data()));
-    CELER_DEVICE_CALL_PREFIX(FreeAsync(reordered_actions, stream));
     CELER_DEVICE_CHECK_ERROR();
 }
 
@@ -225,7 +219,7 @@ void sort_tracks(DeviceRef<CoreStateData> const& states, TrackOrder order)
 void count_tracks_per_action(
     DeviceRef<CoreStateData> const& states,
     Span<ThreadId> offsets,
-    Collection<ThreadId, Ownership::value, MemSpace::host, ActionId>& out,
+    Collection<ThreadId, Ownership::value, MemSpace::mapped, ActionId>& out,
     TrackOrder order)
 {
     if (order == TrackOrder::sort_along_step_action
@@ -241,7 +235,6 @@ void count_tracks_per_action(
         CELER_DEVICE_CHECK_ERROR();
         auto* stream = celeritas::device().stream(states.stream_id).get();
         CELER_LAUNCH_KERNEL(tracks_per_action,
-                            celeritas::device().default_block_size(),
                             states.size(),
                             stream,
                             states,
@@ -249,7 +242,7 @@ void count_tracks_per_action(
                             states.size(),
                             order);
 
-        Span<ThreadId> sout = out[AllItems<ThreadId, MemSpace::host>{}];
+        Span<ThreadId> sout = out[AllItems<ThreadId, MemSpace::mapped>{}];
         Copier<ThreadId, MemSpace::host> copy_to_host{sout, states.stream_id};
         copy_to_host(MemSpace::device, offsets);
 

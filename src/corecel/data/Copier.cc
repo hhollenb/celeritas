@@ -18,13 +18,14 @@ namespace celeritas
 {
 namespace
 {
+//---------------------------------------------------------------------------//
 
 #if CELER_USE_DEVICE
 inline auto to_memcpy_kind(MemSpace src, MemSpace dst)
 {
-    if (src == MemSpace::host && dst == MemSpace::device)
+    if (src != MemSpace::device && dst == MemSpace::device)
         return CELER_DEVICE_PREFIX(MemcpyHostToDevice);
-    else if (src == MemSpace::device && dst == MemSpace::host)
+    else if (src == MemSpace::device && dst != MemSpace::device)
         return CELER_DEVICE_PREFIX(MemcpyDeviceToHost);
     else if (src == MemSpace::device && dst == MemSpace::device)
         return CELER_DEVICE_PREFIX(MemcpyDeviceToDevice);
@@ -45,7 +46,7 @@ void copy_bytes(MemSpace dstmem,
                 void const* src,
                 std::size_t count)
 {
-    if (srcmem == MemSpace::host && dstmem == MemSpace::host)
+    if (srcmem != MemSpace::device && dstmem != MemSpace::device)
     {
         std::memcpy(dst, src, count);
         return;
@@ -62,13 +63,14 @@ void copy_bytes(MemSpace dstmem,
                 MemSpace srcmem,
                 void const* src,
                 std::size_t count,
-                CELER_UNUSED_UNLESS_DEVICE StreamId stream)
+                StreamId stream)
 {
-    if (srcmem == MemSpace::host && dstmem == MemSpace::host)
+    if (srcmem != MemSpace::device && dstmem != MemSpace::device)
     {
         std::memcpy(dst, src, count);
         return;
     }
+    CELER_DISCARD(stream);
     CELER_DEVICE_CALL_PREFIX(
         MemcpyAsync(dst,
                     src,

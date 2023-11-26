@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2022-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2023 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -10,7 +10,7 @@
 #include "corecel/Assert.hh"
 #include "corecel/Macros.hh"
 #include "corecel/io/JsonPimpl.hh"
-#include "accel/SetupOptions.hh"
+#include "celeritas/ext/GeantUtils.hh"
 
 #if CELERITAS_USE_JSON
 #    include <nlohmann/json.hpp>
@@ -43,7 +43,7 @@ void TimerOutput::output(JsonPimpl* j) const
 
     auto obj = json::object();
 
-    obj["time"] = {
+    obj = {
         {"_index", "thread"},
         {"actions", action_time_},
         {"events", event_time_},
@@ -53,7 +53,7 @@ void TimerOutput::output(JsonPimpl* j) const
 
     j->obj = std::move(obj);
 #else
-    (void)sizeof(j);
+    CELER_DISCARD(j);
 #endif
 }
 
@@ -63,7 +63,7 @@ void TimerOutput::output(JsonPimpl* j) const
  */
 void TimerOutput::RecordActionTime(MapStrReal&& time)
 {
-    size_type thread_id = GetThreadID();
+    size_type thread_id = get_geant_thread_id();
     CELER_ASSERT(thread_id < action_time_.size());
     action_time_[thread_id] = std::move(time);
 }
@@ -74,7 +74,7 @@ void TimerOutput::RecordActionTime(MapStrReal&& time)
  */
 void TimerOutput::RecordEventTime(real_type time)
 {
-    size_type thread_id = GetThreadID();
+    size_type thread_id = get_geant_thread_id();
     CELER_ASSERT(thread_id < event_time_.size());
     event_time_[thread_id].push_back(time);
 }

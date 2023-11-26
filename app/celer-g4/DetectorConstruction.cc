@@ -20,15 +20,21 @@
 #include <G4UniformMagField.hh>
 #include <G4VPhysicalVolume.hh>
 
+#include "corecel/cont/ArrayIO.hh"
 #include "corecel/io/Logger.hh"
+#include "corecel/io/OutputRegistry.hh"
+#include "celeritas/Quantities.hh"
 #include "celeritas/field/RZMapFieldInput.hh"
 #include "celeritas/field/RZMapFieldParams.hh"
 #include "celeritas/field/UniformFieldData.hh"
 #include "accel/AlongStepFactory.hh"
+#include "accel/GeantSimpleCalo.hh"
 #include "accel/RZMapMagneticField.hh"
 #include "accel/SetupOptions.hh"
+#include "accel/SharedParams.hh"
 
 #include "GlobalSetup.hh"
+#include "RootIO.hh"
 #include "SensitiveDetector.hh"
 
 namespace celeritas
@@ -41,9 +47,10 @@ namespace app
  *
  * This should be done only during the main/serial thread.
  */
-DetectorConstruction::DetectorConstruction()
+DetectorConstruction::DetectorConstruction(SPParams params)
+    : params_{std::move(params)}
 {
-    auto& sd = celeritas::app::GlobalSetup::Instance()->GetSDSetupOptions();
+    auto& sd = GlobalSetup::Instance()->GetSDSetupOptions();
 
     // Only call back for nonzero energy depositions: this is currently a
     // global option for all detectors, so if any SDs extract data from tracks
@@ -63,28 +70,64 @@ DetectorConstruction::DetectorConstruction()
  */
 G4VPhysicalVolume* DetectorConstruction::Construct()
 {
+    CELER_EXPECT(GlobalSetup::Instance()->GetSDSetupOptions().enabled
+                 == (GlobalSetup::Instance()->input().sd_type
+                     != SensitiveDetectorType::none));
+
+    auto geo = this->construct_geo();
+    CELER_ASSERT(geo.world);
+    detectors_ = std::move(geo.detectors);
+
+    if (!detectors_.empty()
+        && GlobalSetup::Instance()->input().sd_type
+               == SensitiveDetectorType::simple_calo)
+    {
+        this->foreach_detector([this](auto start, auto stop) {
+            std::string name = start->first;
+            std::vector<G4LogicalVolume*> volumes;
+            for (auto iter = start; iter != stop; ++iter)
+            {
+                volumes.push_back(iter->second);
+            }
+            CELER_LOG(debug) << "Creating GeantSimpleCalo '" << name
+                             << "' with " << volumes.size() << " volumes";
+
+            // Create calo manager
+            simple_calos_.push_back(std::make_shared<GeantSimpleCalo>(
+                std::move(name), params_, std::move(volumes)));
+
+            // Add to output
+            params_->output_reg()->insert(simple_calos_.back());
+        });
+    }
+
+    auto field = this->construct_field();
+    CELER_ASSERT(field.along_step);
+    GlobalSetup::Instance()->SetAlongStepFactory(std::move(field.along_step));
+    mag_field_ = std::move(field.g4field);
+    return geo.world.release();
+}
+
+//---------------------------------------------------------------------------//
+/*!
+ * Construct shared geometry information.
+ */
+auto DetectorConstruction::construct_geo() const -> GeoData
+{
     CELER_LOG_LOCAL(status) << "Loading detector geometry";
 
     G4GDMLParser gdml_parser;
     gdml_parser.SetStripFlag(true);
-    if (!GlobalSetup::Instance()->StripGDMLPointers())
-    {
-        // DEPRECATED: remove in 1.0?
-        CELER_LOG(warning) << "Ignoring deprecated 'stripGDMLPointers false'";
-    }
 
     std::string const& filename = GlobalSetup::Instance()->GetGeometryFile();
-    if (filename.empty())
-    {
-        G4Exception("DetectorConstruction::Construct()",
-                    "",
-                    FatalException,
-                    "No GDML file was specified with /celerg4/geometryFile");
-    }
+    CELER_VALIDATE(!filename.empty(),
+                   << "no GDML input file was specified (geometry_file)");
     constexpr bool validate_gdml_schema = false;
     gdml_parser.Read(filename, validate_gdml_schema);
 
-    auto& sd = celeritas::app::GlobalSetup::Instance()->GetSDSetupOptions();
+    auto& sd = GlobalSetup::Instance()->GetSDSetupOptions();
+
+    MapDetectors detectors;
     if (sd.enabled)
     {
         // Find sensitive detectors
@@ -94,12 +137,12 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
             {
                 if (aux.type == "SensDet")
                 {
-                    detectors_.insert({aux.value, lv_vecaux.first});
+                    detectors.insert({aux.value, lv_vecaux.first});
                 }
             }
         }
 
-        if (detectors_.empty())
+        if (detectors.empty())
         {
             CELER_LOG(warning) << "No sensitive detectors were found in the "
                                   "GDML file";
@@ -107,7 +150,21 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
         }
     }
 
-    // Setup options for the magnetic field
+    // Claim ownership of world volume and pass it to the caller
+    return {std::move(detectors),
+            UPPhysicalVolume{gdml_parser.GetWorldVolume()}};
+}
+
+//---------------------------------------------------------------------------//
+/*!
+ * Construct shared magnetic field information.
+ *
+ * This creates the shared Celeritas object and saves some field information
+ * for later.
+ */
+auto DetectorConstruction::construct_field() const -> FieldData
+{
+    // Set up Celeritas magnetic field and save for Geant4
     auto field_type = GlobalSetup::Instance()->GetFieldType();
     if (field_type == "rzmap")
     {
@@ -122,48 +179,57 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
         CELER_LOG_LOCAL(info) << "Using RZMapField with " << map_filename;
 
         // Create celeritas::RZMapFieldParams from input
-        RZMapFieldInput rz_map;
-        std::ifstream(map_filename) >> rz_map;
-        rz_map.driver_options = GlobalSetup::Instance()->GetFieldOptions();
-        field_params_ = std::make_shared<RZMapFieldParams>(rz_map);
-        mag_field_ = std::make_shared<RZMapMagneticField>(field_params_);
+        auto rz_map = [&map_filename] {
+            RZMapFieldInput rz_map;
+            std::ifstream inp(map_filename);
+            CELER_VALIDATE(inp,
+                           << "failed to open field map file at '"
+                           << map_filename << "'");
+            inp >> rz_map;
+            return rz_map;
+        }();
 
-        GlobalSetup::Instance()->SetAlongStepFactory(
-            RZMapFieldAlongStepFactory([=] { return rz_map; }));
+        // Replace driver options with user options
+        rz_map.driver_options = GlobalSetup::Instance()->GetFieldOptions();
+        auto field_params = std::make_shared<RZMapFieldParams>(rz_map);
+
+        // Return celeritas and geant4 fields
+        return {RZMapFieldAlongStepFactory([rz_map] { return rz_map; }),
+                std::make_shared<RZMapMagneticField>(std::move(field_params))};
     }
     else if (field_type == "uniform")
     {
-        auto field = GlobalSetup::Instance()->GetMagFieldZTesla();
-        if (norm(field) > 0)
+        SPMagneticField g4field;
+        auto field_val = GlobalSetup::Instance()->GetMagFieldTesla();
+        if (norm(field_val) > 0)
         {
             CELER_LOG_LOCAL(info)
-                << "Using a uniform field (0, 0, " << field[2] << ") in tesla";
-            mag_field_ = std::make_shared<G4UniformMagField>(
-                convert_to_geant(field, CLHEP::tesla));
+                << "Using a uniform field " << field_val << " [tesla]";
+            g4field = std::make_shared<G4UniformMagField>(
+                convert_to_geant(field_val, CLHEP::tesla));
         }
 
         // Convert field units from tesla to native celeritas units
-        for (real_type& v : field)
+        for (real_type& v : field_val)
         {
-            v *= units::tesla;
+            v = native_value_from(units::FieldTesla{v});
         }
 
         UniformFieldParams input;
-        input.field = field;
+        input.field = field_val;
         input.options = GlobalSetup::Instance()->GetFieldOptions();
-        GlobalSetup::Instance()->SetAlongStepFactory(
-            UniformAlongStepFactory([=] { return input; }));
-    }
-    else
-    {
-        CELER_VALIDATE(false, << "invalid field type '" << field_type << "'");
+
+        return {UniformAlongStepFactory([input] { return input; }),
+                std::move(g4field)};
     }
 
-    // Claim ownership of world volume and pass it to the caller
-    return gdml_parser.GetWorldVolume();
+    CELER_VALIDATE(false, << "invalid field type '" << field_type << "'");
 }
 
 //---------------------------------------------------------------------------//
+/*!
+ * Construct thread-local sensitive detectors and field.
+ */
 void DetectorConstruction::ConstructSDandField()
 {
     if (mag_field_)
@@ -187,40 +253,72 @@ void DetectorConstruction::ConstructSDandField()
             convert_to_geant(field_options.delta_intersection, CLHEP::cm));
     }
 
-    if (detectors_.empty())
+    auto sd_type = GlobalSetup::Instance()->input().sd_type;
+    auto* sd_manager = G4SDManager::GetSDMpointer();
+
+    if (sd_type == SensitiveDetectorType::none)
     {
-        return;
+        CELER_LOG_LOCAL(debug) << "No sensitive detectors requested";
     }
+    else if (sd_type == SensitiveDetectorType::simple_calo)
+    {
+        CELER_LOG_LOCAL(status) << "Attaching simple calorimeters";
+        for (auto& calo : simple_calos_)
+        {
+            // Create and attach SD
+            auto detector = calo->MakeSensitiveDetector();
+            CELER_ASSERT(detector);
+            sd_manager->AddNewDetector(detector.release());
+        }
+    }
+    else if (sd_type == SensitiveDetectorType::event_hit)
+    {
+        CELER_LOG_LOCAL(status) << "Creating SDs";
+        this->foreach_detector([sd_manager](auto start, auto stop) {
+            // Create one detector for all the volumes
+            auto detector = std::make_unique<SensitiveDetector>(start->first);
 
-    CELER_LOG_LOCAL(status) << "Loading sensitive detectors";
+            // Attach sensitive detectors
+            for (auto iter = start; iter != stop; ++iter)
+            {
+                CELER_LOG_LOCAL(debug)
+                    << "Attaching '" << iter->first << "'@" << detector.get()
+                    << " to '" << iter->second->GetName() << "'@"
+                    << static_cast<void const*>(iter->second);
+                iter->second->SetSensitiveDetector(detector.get());
+            }
 
-    G4SDManager* sd_manager = G4SDManager::GetSDMpointer();
+            // Hand SD to the manager
+            sd_manager->AddNewDetector(detector.release());
 
-    auto iter = detectors_.begin();
-    while (iter != detectors_.end())
+            // Add to ROOT output
+            if (RootIO::use_root())
+            {
+                RootIO::Instance()->AddSensitiveDetector(start->first);
+            }
+        });
+    }
+}
+
+//---------------------------------------------------------------------------//
+/*!
+ * Apply a function to the range of volumes for each detector.
+ */
+template<class F>
+void DetectorConstruction::foreach_detector(F&& apply_to_range) const
+{
+    auto start = detectors_.begin();
+    while (start != detectors_.end())
     {
         // Find the end of the current range of keys
-        auto stop = iter;
+        auto stop = start;
         do
         {
             ++stop;
-        } while (stop != detectors_.end() && iter->first == stop->first);
+        } while (stop != detectors_.end() && start->first == stop->first);
 
-        // Create one detector for all the volumes
-        auto detector = std::make_unique<SensitiveDetector>(iter->first);
-
-        // Attach sensitive detectors
-        for (; iter != stop; ++iter)
-        {
-            CELER_LOG_LOCAL(debug)
-                << "Attaching '" << iter->first << "'@" << detector.get()
-                << " to '" << iter->second->GetName() << "'@"
-                << static_cast<void const*>(iter->second);
-            iter->second->SetSensitiveDetector(detector.get());
-        }
-
-        // Hand SD to the manager
-        sd_manager->AddNewDetector(detector.release());
+        apply_to_range(start, stop);
+        start = stop;
     }
 }
 
