@@ -35,19 +35,21 @@ run_name = (path.splitext(path.basename(geometry_filename))[0]
             + ('-gpu' if use_device else '-cpu'))
 
 physics_options = {
-    'coulomb_scattering': False,
-    'compton_scattering': True,
+    'coulomb_scattering': True,
+    'compton_scattering': False,
     'photoelectric': True,
-    'rayleigh_scattering': True,
-    'gamma_conversion': True,
+    'rayleigh_scattering': False,
+    'gamma_conversion': False,
     'gamma_general': False,
-    'ionization': True,
-    'annihilation': True,
-    'brems': "all",
-    'msc': "urban_extended" if core_geo == "vecgeom" else "none",
-    'eloss_fluctuation': True,
-    'lpm': True,
+    'ionization': False,
+    'annihilation': False,
+    'brems': "none",
+    'msc': "none", # "urban_extended" if core_geo == "vecgeom" else "none",
+    'eloss_fluctuation': False,
+    'lpm': False,
 }
+
+print("geometry_filename: " + geometry_filename)
 
 if geant_exp_exe:
     physics_filename = run_name + ".root"
@@ -79,7 +81,7 @@ max_steps = 512 if physics_options['msc'] else 128
 if not use_device:
     # Way more steps are needed since we're not tracking in parallel, but
     # shorten to an unreasonably small number to reduce test time.
-    max_steps = 256
+    max_steps = 1000000
 
 inp = {
     'use_device': use_device,

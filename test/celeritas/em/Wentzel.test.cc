@@ -30,6 +30,7 @@ class CoulombScatteringTest : public InteractorHostTestBase
     void SetUp() override
     {
         using namespace constants;
+
         // Need to include protons
         constexpr units::MevMass emass{0.5109989461};
         ParticleParams::Input par_inp
@@ -60,18 +61,45 @@ class CoulombScatteringTest : public InteractorHostTestBase
                             {AtomicNumber{29},
                              AtomicNumber{65},
                              units::MevMass{60479.8},
-                             "65Cu"}};
+                             "65Cu"},
+                            // Lead
+                            {AtomicNumber{82},
+                             AtomicNumber{204},
+                             units::MevMass{189999.6},
+                             "204Pb"},
+                            {AtomicNumber{82},
+                             AtomicNumber{206},
+                             units::MevMass{191863.9},
+                             "206Pb"},
+                            {AtomicNumber{82},
+                             AtomicNumber{207},
+                             units::MevMass{192796.8},
+                             "207Pb"},
+                            {AtomicNumber{82},
+                             AtomicNumber{208},
+                             units::MevMass{193729.0},
+                             "208Pb"}};
         mat_inp.elements = {{AtomicNumber{29},
                              units::AmuMass{63.546},
                              {{IsotopeId{0}, 0.692}, {IsotopeId{1}, 0.308}},
-                             "Cu"}};
-        mat_inp.materials = {
-            {0.141 * constants::na_avogadro,
-             293.0,
-             MatterState::solid,
-             {{ElementId{0}, 1.0}},
-             "Cu"},
-        };
+                             "Cu"},
+                            {AtomicNumber{82},
+                             units::AmuMass{207.2},
+                             {{IsotopeId{2}, 0.014},
+                              {IsotopeId{3}, 0.241},
+                              {IsotopeId{4}, 0.221},
+                              {IsotopeId{5}, 0.524}},
+                             "Pb"}};
+        mat_inp.materials = {{0.141 * na_avogadro,
+                              293.0,
+                              MatterState::solid,
+                              {{ElementId{0}, 1.0}},
+                              "Cu"},
+                             {0.141 * na_avogadro,
+                              293.0,
+                              MatterState::solid,
+                              {{ElementId{1}, 1.0}},
+                              "Pb"}};
         this->set_material_params(mat_inp);
 
         // Create mock import data
@@ -100,7 +128,8 @@ class CoulombScatteringTest : public InteractorHostTestBase
         CutoffParams::Input input;
         CutoffParams::MaterialCutoffs material_cutoffs;
         // TODO: Use realistic cutoff / material with high cutoff
-        material_cutoffs.push_back({MevEnergy{0.5}, 0.07});
+        material_cutoffs.push_back({MevEnergy{0.5}, 0.1});
+        material_cutoffs.push_back({MevEnergy{0.5}, 0.1});
         input.materials = this->material_params();
         input.particles = this->particle_params();
         input.cutoffs.insert({pdg::electron(), material_cutoffs});
@@ -111,7 +140,9 @@ class CoulombScatteringTest : public InteractorHostTestBase
         // Set incident particle to be an electron at 200 MeV
         this->set_inc_particle(pdg::electron(), MevEnergy{200.0});
         this->set_inc_direction({0, 0, 1});
-        this->set_material("Cu");
+        this->set_material("Pb");
+
+        std::cout << "Constructor done\n";
     }
 
     void sanity_check(Interaction const& interaction) const
@@ -138,15 +169,21 @@ class CoulombScatteringTest : public InteractorHostTestBase
 
 TEST_F(CoulombScatteringTest, wokvi_xs)
 {
+    std::cout << "Starting wokvi_xs\n";
+
     WentzelHostRef const& data = model_->host_ref();
+    std::cout << "Build Host ref!\n";
 
     AtomicNumber const target_z
         = this->material_params()->get(ElementId{0}).atomic_number();
+    std::cout << "Atomic number done\n";
 
     const real_type cutoff_energy = value_as<units::MevEnergy>(
         this->cutoff_params()
             ->get(MaterialId{0})
             .energy(this->particle_track().particle_id()));
+
+    std::cout << "Cutoff energy done\n";
 
     const std::vector<real_type> energies = {50, 100, 200, 1000, 13000};
 
@@ -171,6 +208,7 @@ TEST_F(CoulombScatteringTest, wokvi_xs)
     std::vector<real_type> xsecs, cos_t_maxs, screen_zs;
     for (real_type energy : energies)
     {
+        std::cout << "energy: " << energy << "\n";
         this->set_inc_particle(pdg::electron(), MevEnergy{energy});
 
         WentzelRatioCalculator calc(
@@ -181,6 +219,7 @@ TEST_F(CoulombScatteringTest, wokvi_xs)
         screen_zs.push_back(calc.screening_coefficient());
     }
 
+    std::cout << "checking...\n";
     EXPECT_VEC_SOFT_EQ(expected_xsecs, xsecs);
     EXPECT_VEC_SOFT_EQ(expected_screen_z, screen_zs);
     EXPECT_VEC_SOFT_EQ(expected_cos_t_max, cos_t_maxs);
@@ -317,6 +356,46 @@ TEST_F(CoulombScatteringTest, distribution)
 
         EXPECT_SOFT_NEAR(
             expected_avg_angles[i], avg_angle, std::sqrt(num_samples));
+    }
+}
+
+TEST_F(CoulombScatteringTest, my_test)
+{
+    WentzelHostRef const& data = model_->host_ref();
+
+    AtomicNumber const target_z{82};
+
+    const real_type cutoff_energy = 0.1;
+
+    const std::vector<real_type> energies = {50, 100, 200, 1000, 13000};
+
+    const IsotopeView isotope = this->material_track()
+                                    .make_material_view()
+                                    .make_element_view(ElementComponentId{1})
+                                    .make_isotope_view(IsotopeComponentId{3});
+    auto cutoffs = this->cutoff_params()->get(MaterialId{1});
+
+    RandomEngine& rng_engine = this->rng();
+
+    for (real_type energy : energies)
+    {
+        this->set_inc_particle(pdg::electron(), MevEnergy{energy});
+
+        WentzelRatioCalculator calc(
+            particle_track(), target_z, data, cutoff_energy);
+
+        auto const& particle = particle_track();
+        std::cout
+            << "screenZ: " << calc.screening_coefficient() << "\n"
+            << "mass: " << value_as<units::MevMass>(particle.mass()) << "\n"
+            << "targetZ: " << target_z.get() << "\n"
+            << "kinetic energy: "
+            << value_as<units::MevEnergy>(particle.energy()) << "\n"
+            << "invbeta2: " << (1.0 / particle.beta_sq()) << "\n"
+            << "momentum squared: "
+            << value_as<units::MevMomentumSq>(particle.momentum_sq()) << "\n"
+            << "cos_t_max_elec: " << calc.cos_t_max_elec() << "\n"
+            << "xsec ratio: " << calc() << "\n\n";
     }
 }
 
