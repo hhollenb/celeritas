@@ -367,11 +367,11 @@ TEST_F(CoulombScatteringTest, my_test)
 
     const real_type cutoff_energy = 0.1;
 
-    const std::vector<real_type> energies = {50, 100, 200, 1000, 13000};
+    const std::vector<real_type> energies = {50, 100, 200, 500, 1000, 13000};
 
     const IsotopeView isotope = this->material_track()
                                     .make_material_view()
-                                    .make_element_view(ElementComponentId{1})
+                                    .make_element_view(ElementComponentId{0})
                                     .make_isotope_view(IsotopeComponentId{3});
     auto cutoffs = this->cutoff_params()->get(MaterialId{1});
 

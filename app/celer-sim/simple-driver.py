@@ -37,7 +37,7 @@ run_name = (path.splitext(path.basename(geometry_filename))[0]
 physics_options = {
     'coulomb_scattering': True,
     'compton_scattering': False,
-    'photoelectric': True,
+    'photoelectric': False,
     'rayleigh_scattering': False,
     'gamma_conversion': False,
     'gamma_general': False,
@@ -81,7 +81,7 @@ max_steps = 512 if physics_options['msc'] else 128
 if not use_device:
     # Way more steps are needed since we're not tracking in parallel, but
     # shorten to an unreasonably small number to reduce test time.
-    max_steps = 1000000
+    max_steps = 200000
 
 inp = {
     'use_device': use_device,
