@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2023-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -55,7 +55,7 @@ class TransformVisitor
     // Apply the function to the transform specified by the given ID
     template<class F>
     inline CELER_FUNCTION decltype(auto)
-    operator()(F&& typed_visitor, TransformId t);
+    operator()(F && typed_visitor, TransformId t);
 
   private:
     TransformRecords const& transforms_;
@@ -88,6 +88,7 @@ CELER_FUNCTION TransformVisitor::TransformVisitor(ParamsRef const& params)
 {
 }
 
+#if !defined(__DOXYGEN__) || __DOXYGEN__ > 0x010908
 //---------------------------------------------------------------------------//
 /*!
  * Apply the function to the transform specified by the given ID.
@@ -111,6 +112,7 @@ TransformVisitor::operator()(F&& func, TransformId id)
         },
         tr.type);
 }
+#endif
 
 //---------------------------------------------------------------------------//
 /*!
@@ -124,7 +126,7 @@ TransformVisitor::make_transform(OpaqueId<real_type> data_offset) const
     constexpr size_type size{T::StorageSpan::extent};
     CELER_ASSERT(data_offset + size <= reals_.size());
 
-    return T{reals_[{data_offset, data_offset + size}]};
+    return T{reals_[Reals::ItemRangeT{data_offset, data_offset + size}]};
 }
 
 //---------------------------------------------------------------------------//

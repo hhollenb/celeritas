@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2020-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2020-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -15,8 +15,8 @@
 namespace celeritas
 {
 //---------------------------------------------------------------------------//
-#if CELER_USE_DEVICE
-//! Standard type for container sizes, optimized for GPU use.
+#if CELER_USE_DEVICE || defined(__DOXYGEN__)
+//! Standard type for container sizes, optimized for GPU use
 using size_type = unsigned int;
 #else
 using size_type = std::size_t;
@@ -37,17 +37,14 @@ using ull_int = unsigned long long int;
 //---------------------------------------------------------------------------//
 // ENUMERATIONS
 //---------------------------------------------------------------------------//
-using Byte = std::byte;
-
-//---------------------------------------------------------------------------//
 //! Memory location of data
 enum class MemSpace
 {
-    host,
-    device,
-    mapped,
+    host,  //!< CPU memory
+    device,  //!< GPU memory
+    mapped,  //!< Unified virtual address space (both host and device)
 #ifdef CELER_DEVICE_SOURCE
-    native = device,  // Included by a CUDA/HIP file
+    native = device,  //!< When included by a CUDA/HIP file; else 'host'
 #else
     native = host,
 #endif
@@ -112,6 +109,7 @@ inline constexpr char const* to_cstring(MemSpace m)
 {
     return m == MemSpace::host     ? "host"
            : m == MemSpace::device ? "device"
+           : m == MemSpace::mapped ? "mapped"
                                    : nullptr;
 }
 

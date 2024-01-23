@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2022-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2022-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -16,7 +16,10 @@
 #include "corecel/io/Logger.hh"
 #include "corecel/io/StringUtils.hh"
 #include "corecel/sys/Device.hh"
+#include "celeritas/ext/RootFileManager.hh"
 #include "celeritas/field/RZMapFieldInput.hh"
+#include "accel/ExceptionConverter.hh"
+#include "accel/HepMC3PrimaryGenerator.hh"
 #include "accel/SetupOptionsMessenger.hh"
 
 #include "HepMC3PrimaryGeneratorAction.hh"
@@ -110,23 +113,29 @@ void GlobalSetup::SetIgnoreProcesses(SetupOptions::VecString ignored)
  */
 void GlobalSetup::ReadInput(std::string const& filename)
 {
-    if (ends_with(filename, ".mac"))
+    bool is_json_file = ends_with(filename, ".json");
+    if (is_json_file || filename == "-")
     {
-        CELER_LOG(status) << "Executing macro commands from '" << filename
-                          << "'";
-        G4UImanager* ui = G4UImanager::GetUIpointer();
-        CELER_ASSERT(ui);
-        ui->ApplyCommand(std::string("/control/execute ") + filename);
-    }
-    else
-    {
+        CELER_LOG(status) << "Reading JSON input from '"
+                          << (is_json_file ? filename : "<stdin>") << "'";
+        std::istream* instream{nullptr};
+        std::ifstream infile;
+        if (is_json_file)
+        {
+            instream = &infile;
+            infile.open(filename);
+            CELER_VALIDATE(infile, << "failed to open '" << filename << "'");
+        }
+        else
+        {
+            instream = &std::cin;
+        }
+        CELER_ASSERT(instream);
 #if CELERITAS_USE_JSON
-        using std::to_string;
-
-        CELER_LOG(status) << "Reading JSON input from '" << filename << "'";
-        std::ifstream infile(filename);
-        CELER_VALIDATE(infile, << "failed to open '" << filename << "'");
-        nlohmann::json::parse(infile).get_to(input_);
+        nlohmann::json::parse(*instream).get_to(input_);
+#else
+        CELER_NOT_CONFIGURED("nlohmann_json");
+#endif
 
         // Input options
         if (CELERITAS_CORE_GEO == CELERITAS_CORE_GEO_ORANGE)
@@ -143,7 +152,21 @@ void GlobalSetup::ReadInput(std::string const& filename)
 
         // Apply Celeritas \c SetupOptions commands
         options_->max_num_tracks = input_.num_track_slots;
-        options_->max_num_events = input_.max_events;
+        options_->max_num_events = [this] {
+            CELER_VALIDATE(input_.primary_options || !input_.event_file.empty(),
+                           << "no event input file nor primary options were "
+                              "specified");
+            if (!input_.event_file.empty())
+            {
+                hepmc_gen_ = std::make_shared<HepMC3PrimaryGenerator>(
+                    input_.event_file);
+                return static_cast<size_type>(hepmc_gen_->NumEvents());
+            }
+            else
+            {
+                return input_.primary_options.num_events;
+            }
+        }();
         options_->max_steps = input_.max_steps;
         options_->initializer_capacity = input_.initializer_capacity;
         options_->secondary_stack_factor = input_.secondary_stack_factor;
@@ -152,17 +175,20 @@ void GlobalSetup::ReadInput(std::string const& filename)
         options_->cuda_heap_size = input_.cuda_heap_size;
         options_->sync = input_.sync;
         options_->default_stream = input_.default_stream;
+    }
+    else if (ends_with(filename, ".mac"))
+    {
+        input_.macro_file = filename;
+    }
 
-        // Execute macro for Geant4 commands (e.g. to set verbosity)
-        if (!input_.macro_file.empty())
-        {
-            G4UImanager* ui = G4UImanager::GetUIpointer();
-            CELER_ASSERT(ui);
-            ui->ApplyCommand("/control/execute " + input_.macro_file);
-        }
-#else
-        CELER_NOT_CONFIGURED("nlohmann_json");
-#endif
+    // Execute macro for Geant4 commands (e.g. to set verbosity)
+    if (!input_.macro_file.empty())
+    {
+        CELER_LOG(status) << "Executing macro commands from '" << filename
+                          << "'";
+        G4UImanager* ui = G4UImanager::GetUIpointer();
+        CELER_ASSERT(ui);
+        ui->ApplyCommand("/control/execute " + input_.macro_file);
     }
 
     // Set the filename for JSON output
@@ -172,11 +198,18 @@ void GlobalSetup::ReadInput(std::string const& filename)
         options_->output_file = input_.output_file;
     }
 
-    if (input_.sd_type == SensitiveDetectorType::event_hit
-        && !RootIO::use_root())
+    if (input_.sd_type == SensitiveDetectorType::event_hit)
     {
-        CELER_LOG(warning) << "Collecting SD hit data that will not be "
-                              "written because ROOT is disabled";
+        root_sd_io_ = RootFileManager::use_root();
+        if (!root_sd_io_)
+        {
+            CELER_LOG(warning) << "Collecting SD hit data that will not be "
+                                  "written because ROOT is disabled";
+        }
+    }
+    else
+    {
+        root_sd_io_ = false;
     }
 
     // Start the timer for setup time

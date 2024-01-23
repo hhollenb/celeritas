@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2020-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2020-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -36,10 +36,10 @@ class RZMapFieldParams final : public ParamsDataInterface<RZMapFieldParamsData>
     explicit RZMapFieldParams(Input const& inp);
 
     //! Access field map data on the host
-    HostRef const& host_ref() const final { return mirror_.host(); }
+    HostRef const& host_ref() const final { return mirror_.host_ref(); }
 
     //! Access field map data on the device
-    DeviceRef const& device_ref() const final { return mirror_.device(); }
+    DeviceRef const& device_ref() const final { return mirror_.device_ref(); }
 
   private:
     // Host/device storage and reference

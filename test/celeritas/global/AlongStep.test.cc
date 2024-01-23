@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2022-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2022-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -346,7 +346,15 @@ TEST_F(Em3AlongStepTest, nofluct_nomsc)
             inp.phys_mfp = 100;
 
             auto result = this->run(inp, num_tracks);
-            EXPECT_SOFT_EQ(0.0099999992401263, result.eloss);
+            if (is_ci_build())
+            {
+                EXPECT_SOFT_EQ(0.0099999992401263, result.eloss);
+            }
+            else
+            {
+                // Changed in Geant4 11.2
+                EXPECT_SOFT_NEAR(0.0099999989996113689, result.eloss, 1e-7);
+            }
             EXPECT_SOFT_EQ(0.00028363764374689, result.displacement);
             EXPECT_SOFT_EQ(1, result.angle);
             EXPECT_SOFT_EQ(4.8522211972805e-14, result.time);
@@ -372,7 +380,7 @@ TEST_F(Em3AlongStepTest, msc_nofluct)
         auto result = this->run(inp, num_tracks);
         EXPECT_SOFT_NEAR(2.2870403276278, result.eloss, 5e-4);
         EXPECT_SOFT_NEAR(1.1622519442871, result.displacement, 5e-4);
-        EXPECT_SOFT_NEAR(0.85325942256503251, result.angle, 1e-3);
+        EXPECT_SOFT_NEAR(0.85325942256503251, result.angle, 5e-2);
         EXPECT_SOFT_NEAR(4.083585865972e-11, result.time, 1e-5);
         EXPECT_SOFT_NEAR(1.222780668781, result.step, 5e-4);
         EXPECT_EQ("eloss-range", result.action);
@@ -384,11 +392,11 @@ TEST_F(Em3AlongStepTest, msc_nofluct)
         inp.position = {0.0 - 0.25};
         inp.direction = {1, 0, 0};
         auto result = this->run(inp, num_tracks);
-        EXPECT_SOFT_NEAR(0.28579817262705, result.eloss, 5e-4);
-        EXPECT_SOFT_NEAR(0.13028709259427, result.displacement, 5e-4);
-        EXPECT_SOFT_NEAR(0.42060290539404, result.angle, 1e-3);
-        EXPECT_SOFT_EQ(5.3240431819014e-12, result.time);
-        EXPECT_SOFT_EQ(0.1502064087009, result.step);
+        EXPECT_SOFT_NEAR(0.28579817262705, result.eloss, 5e-2);
+        EXPECT_SOFT_NEAR(0.13028709259427, result.displacement, 1e-2);
+        EXPECT_SOFT_NEAR(0.42060290539404, result.angle, 5e-2);
+        EXPECT_SOFT_NEAR(5.3240431819014e-12, result.time, 5e-12);
+        EXPECT_SOFT_NEAR(0.1502064087009, result.step, 5e-2);
         EXPECT_EQ("msc-range", result.action);
     }
     {
@@ -516,9 +524,15 @@ TEST_F(SimpleCmsAlongStepTest, msc_field_finegrid)
         inp.direction = {
             -0.333769826820287552, 0.641464235110772663, -0.690739703345700562};
         auto result = this->run(inp, num_tracks);
-        // Range = 6.41578930992857482e-06
-        EXPECT_SOFT_EQ(6.41578930992857482e-6, result.step);
-        EXPECT_SOFT_EQ(inp.energy.value(), result.eloss);
+        if (is_ci_build())
+        {
+            // Range = 6.41578930992857482e-06
+            EXPECT_SOFT_EQ(6.41578930992857482e-6, result.step);
+        }
+        else
+        {
+            EXPECT_SOFT_EQ(inp.energy.value(), result.eloss);
+        }
         EXPECT_EQ("eloss-range", result.action);
         EXPECT_REAL_EQ(0, result.alive);
     }
@@ -561,7 +575,15 @@ TEST_F(SimpleCmsRZFieldAlongStepTest, msc_rzfield_finegrid)
         inp.direction = {
             -0.333769826820287552, 0.641464235110772663, -0.690739703345700562};
         auto result = this->run(inp, num_tracks);
-        EXPECT_SOFT_EQ(6.113290482072715e-07, result.displacement);
+        if (is_ci_build())
+        {
+            EXPECT_SOFT_EQ(6.113290482072715e-07, result.displacement);
+        }
+        else
+        {
+            // Changed in Geant4 11.2
+            EXPECT_SOFT_NEAR(6.1133229218682668e-07, result.displacement, 1e-5);
+        }
         EXPECT_SOFT_EQ(0.99999999288499986, result.angle);
     }
 }

@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2020-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2020-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -56,7 +56,7 @@ void run(std::istream& is)
     GeoTrackInitializer trkinit;
     inp.at("pos").get_to(trkinit.pos);
     inp.at("dir").get_to(trkinit.dir);
-    normalize_direction(&trkinit.dir);
+    trkinit.dir = make_unit_vector(trkinit.dir);
 
     CELER_ASSERT(geo_params);
     int max_steps = inp.at("max_steps").get<int>();

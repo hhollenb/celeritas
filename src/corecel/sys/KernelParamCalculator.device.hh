@@ -1,5 +1,5 @@
 //---------------------------------*-C++-*-----------------------------------//
-// Copyright 2020-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2020-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -36,6 +36,29 @@
         auto grid_ = calc_launch_params_(THREADS);                           \
                                                                              \
         CELER_LAUNCH_KERNEL_IMPL(NAME##_kernel,                              \
+                                 grid_.blocks_per_grid,                      \
+                                 grid_.threads_per_block,                    \
+                                 0,                                          \
+                                 STREAM,                                     \
+                                 __VA_ARGS__);                               \
+        CELER_DEVICE_CHECK_ERROR();                                          \
+    } while (0)
+
+/*!
+ * \def CELER_LAUNCH_KERNEL_TEMPLATE_1
+ *
+ * Create a kernel param calculator with the given kernel with
+ * one template parameter, assuming the unction itself has a \c _kernel
+ * suffix, and launch with the given block/thread sizes and arguments list.
+ */
+#define CELER_LAUNCH_KERNEL_TEMPLATE_1(NAME, T1, THREADS, STREAM, ...)       \
+    do                                                                       \
+    {                                                                        \
+        static const ::celeritas::KernelParamCalculator calc_launch_params_( \
+            #NAME, NAME##_kernel<T1>);                                       \
+        auto grid_ = calc_launch_params_(THREADS);                           \
+                                                                             \
+        CELER_LAUNCH_KERNEL_IMPL(NAME##_kernel<T1>,                          \
                                  grid_.blocks_per_grid,                      \
                                  grid_.threads_per_block,                    \
                                  0,                                          \

@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2021-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2021-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -31,7 +31,7 @@ class SphereCenteredTest : public Test
 TEST_F(SphereCenteredTest, construction)
 {
     EXPECT_EQ(SurfaceType::sc, SphereCentered::surface_type());
-    EXPECT_EQ(1, SphereCentered::Storage::extent);
+    EXPECT_EQ(1, SphereCentered::StorageSpan::extent);
     EXPECT_EQ(2, SphereCentered::Intersections{}.size());
 
     SphereCentered s{3};

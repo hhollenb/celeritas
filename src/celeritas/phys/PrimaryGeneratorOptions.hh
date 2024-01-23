@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2022-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2022-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -47,6 +47,8 @@ struct DistributionOptions
 /*!
  * Primary generator options.
  *
+ * TODO: distributions should be std::variant (see ORANGE input)
+ *
  * - \c seed: RNG seed
  * - \c pdg: PDG numbers of the primaries. An equal number of primaries of each
  *   type will be generated
@@ -78,6 +80,8 @@ struct PrimaryGeneratorOptions
     }
 };
 
+// TODO: move to PrimaryGenerator.hh
+
 using PrimaryGeneratorEngine = std::mt19937;
 
 //---------------------------------------------------------------------------//
@@ -86,6 +90,8 @@ using PrimaryGeneratorEngine = std::mt19937;
 
 // Get a distribution name
 char const* to_cstring(DistributionSelection value);
+
+// TODO: move these to PrimaryGenerator.hh
 
 // Return a distribution for sampling the energy
 std::function<real_type(PrimaryGeneratorEngine&)>

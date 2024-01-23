@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2023-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -42,9 +42,8 @@ class SimpleQuadric
     //@{
     //! \name Type aliases
     using Intersections = Array<real_type, 2>;
-    using StorageSpan = Span<const real_type, 7>;
-    using Storage = StorageSpan;  // DEPRECATED
-    using SpanConstReal3 = Span<const real_type, 3>;
+    using StorageSpan = Span<real_type const, 7>;
+    using SpanConstReal3 = Span<real_type const, 3>;
     //@}
 
     //// CLASS ATTRIBUTES ////
@@ -95,7 +94,7 @@ class SimpleQuadric
     CELER_FUNCTION real_type zeroth() const { return g_; }
 
     //! Get a view to the data for type-deleted storage
-    CELER_FUNCTION Storage data() const { return {&a_, 7}; }
+    CELER_FUNCTION StorageSpan data() const { return {&a_, 7}; }
 
     //// CALCULATION ////
 
@@ -210,8 +209,7 @@ CELER_FUNCTION Real3 SimpleQuadric::calc_normal(Real3 const& pos) const
     real_type const z = pos[to_int(Axis::z)];
 
     Real3 norm{2 * a_ * x + d_, 2 * b_ * y + e_, 2 * c_ * z + f_};
-    normalize_direction(&norm);
-    return norm;
+    return make_unit_vector(norm);
 }
 
 //---------------------------------------------------------------------------//

@@ -1,5 +1,5 @@
 #---------------------------------*-CMake-*----------------------------------#
-# Copyright 2020-2023 UT-Battelle, LLC, and other Celeritas developers.
+# Copyright 2020-2024 UT-Battelle, LLC, and other Celeritas developers.
 # See the top-level COPYRIGHT file for details.
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 #----------------------------------------------------------------------------#
@@ -50,17 +50,16 @@ celeritas_optional_package(ROOT "Enable ROOT I/O")
 celeritas_optional_package(VecGeom "Use VecGeom geometry")
 
 if(CELERITAS_USE_Python)
-  celeritas_optional_package(SWIG "Build SWIG Python bindings")
+  celeritas_optional_package(SWIG SWIG@4.1 "Build SWIG Python bindings")
 endif()
 
 # Components
 option(CELERITAS_BUILD_DOCS "Build Celeritas documentation" OFF)
-option(CELERITAS_BUILD_DEMOS "Build Celeritas demonstration mini-apps"
-  ${CELERITAS_USE_JSON})
-option(CELERITAS_BUILD_TESTS "Build Celeritas unit tests" ON)
+option(CELERITAS_BUILD_DEMOS "Build Celeritas demonstration mini-apps" OFF)
+option(CELERITAS_BUILD_TESTS "Build Celeritas unit tests" OFF)
 
 # Assertion handling
-option(CELERITAS_DEBUG "Enable runtime assertions" ON)
+option(CELERITAS_DEBUG "Enable runtime assertions" OFF)
 
 # Secondary testing options (only applies to CTest)
 if(NOT CELERITAS_DEBUG OR CELERITAS_USE_VecGeom)
@@ -125,6 +124,12 @@ if(CELERITAS_CORE_GEO STREQUAL Geant4)
 else()
   set(_allow_single_prec TRUE)
 endif()
+
+celeritas_setup_option(CELERITAS_UNITS CGS)
+celeritas_setup_option(CELERITAS_UNITS SI)
+celeritas_setup_option(CELERITAS_UNITS CLHEP)
+celeritas_define_options(CELERITAS_UNITS
+  "Native unit system for Celeritas")
 
 celeritas_setup_option(CELERITAS_REAL_TYPE double)
 celeritas_setup_option(CELERITAS_REAL_TYPE float)
@@ -319,33 +324,47 @@ if(CELERITAS_USE_SWIG)
 endif()
 
 if(CELERITAS_USE_VecGeom)
+  set(_min_vecgeom_version 1.2.4)
   if(NOT VecGeom_FOUND)
-    find_package(VecGeom 1.2.4 REQUIRED)
+    find_package(VecGeom ${_min_vecgeom_version} REQUIRED)
+  elseif(VecGeom_VERSION VERSION_LESS _min_vecgeom_version)
+    # Another package, probably Geant4, is already using vecgeom
+    celeritas_error_incompatible_option(
+      "VecGeom version \"${VecGeom_VERSION}\" at \"${VecGeom_DIR}\" is too old for Celeritas to use: you must update to ${_min_vecgeom_version} or higher"
+      CELERITAS_USE_VecGeom
+      OFF
+    )
   endif()
 
   if(CELERITAS_USE_CUDA AND NOT VecGeom_CUDA_FOUND)
     celeritas_error_incompatible_option(
-      "VecGeom installation at ${VECGEOM_INSTALL_DIR} is not CUDA-enabled"
+      "VecGeom installation at \"${VecGeom_DIR}\" is not CUDA-enabled"
       CELERITAS_USE_CUDA
       "${VecGeom_CUDA_FOUND}"
     )
   endif()
   if(CELERITAS_REAL_TYPE STREQUAL "float" AND NOT VecGeom_single_precision_FOUND)
     celeritas_error_incompatible_option(
-      "VecGeom installation at ${VECGEOM_INSTALL_DIR} uses double precision"
+      "VecGeom installation at \"${VecGeom_DIR}\" uses double precision"
       CELERITAS_REAL_TYPE
       "double"
     )
   endif()
   if(CELERITAS_REAL_TYPE STREQUAL "double" AND VecGeom_single_precision_FOUND)
     celeritas_error_incompatible_option(
-      "VecGeom installation at ${VECGEOM_INSTALL_DIR} uses single precision"
+      "VecGeom installation at \"${VecGeom_DIR}\" uses single precision"
       CELERITAS_REAL_TYPE
       "float"
     )
   endif()
-  if(NOT VecGeom_GDML_FOUND)
-    message(SEND_ERROR "VecGeom GDML capability is required for Celeritas")
+  if(CELERITAS_BUILD_TESTS AND NOT VecGeom_GDML_FOUND
+      AND CELERITAS_CORE_GEO STREQUAL "VecGeom")
+    celeritas_error_incompatible_option(
+      "VecGeom installation at \"${VecGeom_DIR}\" was not built with VGDML:
+      celer-sim and many tests will fail"
+      CELERITAS_BUILD_TESTS
+      OFF
+    )
   endif()
 endif()
 

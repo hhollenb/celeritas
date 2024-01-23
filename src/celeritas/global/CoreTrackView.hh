@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2022-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2022-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -213,7 +213,7 @@ CELER_FUNCTION auto CoreTrackView::make_physics_step_view() const
  */
 CELER_FUNCTION auto CoreTrackView::make_rng_engine() const -> RngEngine
 {
-    return RngEngine{states_.rng, this->track_slot_id()};
+    return RngEngine{params_.rng, states_.rng, this->track_slot_id()};
 }
 
 //---------------------------------------------------------------------------//

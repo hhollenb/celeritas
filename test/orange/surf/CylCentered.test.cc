@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2021-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2021-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -36,13 +36,13 @@ using VecReal = std::vector<real_type>;
 //---------------------------------------------------------------------------//
 TEST_F(CCylXTest, construction)
 {
-    EXPECT_EQ(1, CCylX::Storage::extent);
+    EXPECT_EQ(1, CCylX::StorageSpan::extent);
     EXPECT_EQ(2, CCylX::Intersections{}.size());
 
     CCylX c(4.0);
     EXPECT_SOFT_EQ(ipow<2>(4), c.radius_sq());
 
-    const real_type expected_data[] = {ipow<2>(4)};
+    real_type const expected_data[] = {ipow<2>(4)};
 
     EXPECT_VEC_SOFT_EQ(expected_data, c.data());
 
@@ -280,7 +280,7 @@ TEST_F(CCylZTest, calc_intersections)
 TEST_F(CCylZTest, calc_intersections_on_surface)
 {
     CCylZ::Intersections distances;
-    const real_type eps = 1.e-4;
+    real_type const eps = 1.e-4;
 
     {
         CCylZ cyl(1.0);
@@ -389,7 +389,7 @@ TEST_F(CCylZTest, TEST_IF_CELERITAS_DOUBLE(multi_along_intersect))
                  })
             {
                 Real3 pos = orig_pos;
-                normalize_direction(&dir);
+                dir = make_unit_vector(dir);
 
                 // Transport to inside of cylinder
                 real_type d
@@ -476,7 +476,7 @@ void DegenerateBoundaryTest::run(real_type xdir) const
     real_type const tol = std::max<real_type>(1.e-14, 2 * std::fabs(eps));
 
     // Distance across the cylinder
-    const real_type diameter = 2 * radius;
+    real_type const diameter = 2 * radius;
 
     Real3 pos = {0, 0, 0};
     Real3 dir = {xdir, 0, 0};

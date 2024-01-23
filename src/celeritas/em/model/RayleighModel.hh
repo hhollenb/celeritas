@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2020-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2020-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -67,10 +67,10 @@ class RayleighModel final : public Model
     }
 
     //! Access Rayleigh data on the host
-    HostRef const& host_ref() const { return mirror_.host(); }
+    HostRef const& host_ref() const { return mirror_.host_ref(); }
 
     //! Access Rayleigh data on the device
-    DeviceRef const& device_ref() const { return mirror_.device(); }
+    DeviceRef const& device_ref() const { return mirror_.device_ref(); }
 
   private:
     //// DATA ////

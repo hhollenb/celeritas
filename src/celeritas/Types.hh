@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2020-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2020-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -65,6 +65,9 @@ using ElementComponentId = OpaqueId<struct MatElementComponent>;
 
 //! Opaque index to one isotopic component datum in a particular element
 using IsotopeComponentId = OpaqueId<struct ElIsotopeComponent>;
+
+//! Opaque index to a material with optical properties
+using OpticalMaterialId = OpaqueId<struct OpticalMaterial_>;
 
 //! Opaque index of a process applicable to a single particle type
 using ParticleProcessId = OpaqueId<ProcessId>;
@@ -144,6 +147,7 @@ enum class TrackOrder
     sort_along_step_action,  //!< Sort only by the along-step action id
     sort_step_limit_action,  //!< Sort only by the step limit action id
     sort_action,  //!< Sort by along-step id, then post-step ID
+    sort_particle_type,  //!< Sort by particle type
     size_
 };
 

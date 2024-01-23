@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2020-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2020-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -49,10 +49,10 @@ class XsGridParams
     explicit XsGridParams(Input const& input);
 
     // Access on-device data
-    DeviceRef const& device_ref() const { return data_.device(); }
+    DeviceRef const& device_ref() const { return data_.device_ref(); }
 
     // Get host-side data
-    HostRef const& host_ref() const { return data_.host(); }
+    HostRef const& host_ref() const { return data_.host_ref(); }
 
   private:
     CollectionMirror<TableData> data_;

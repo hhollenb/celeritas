@@ -1,15 +1,16 @@
 /*----------------------------------*-C-*------------------------------------*
- * Copyright 2020-2023 UT-Battelle, LLC, and other Celeritas developers.
+ * Copyright 2020-2024 UT-Battelle, LLC, and other Celeritas developers.
  * See the top-level COPYRIGHT file for details.
  * SPDX-License-Identifier: (Apache-2.0 OR MIT)
  *---------------------------------------------------------------------------*/
 /*! \file celeritas_config.h
  * Configuration-specific options for Celeritas.
  *
- * Note that the nonzero values for \c CELERITAS_CORE_RNG and \c CELERITAS_CORE_GEO
- * values *must not* be used directly: only compare between (e.g.)
- * \c CELERITAS_CORE_RNG and \c CELERITAS_CORE_RNG_HIPRAND; options that are *invalid*
- * (e.g.  for missing libraries such as HIP) will have a value of zero.
+ * Note that the nonzero values for \c CELERITAS_CORE_RNG and \c
+ * CELERITAS_CORE_GEO values *must not* be used directly: only compare between
+ * (e.g.) \c CELERITAS_CORE_RNG and \c CELERITAS_CORE_RNG_HIPRAND; options that
+ * are *invalid* (e.g. for missing libraries such as HIP) will have a value of
+ * zero.
  *---------------------------------------------------------------------------*/
 #ifndef celeritas_config_h
 #define celeritas_config_h
@@ -28,9 +29,11 @@
 
 @CELERITAS_REAL_TYPE_CONFIG@
 
-@CELERITAS_CORE_RNG_CONFIG@
+@CELERITAS_UNITS_CONFIG@
 
 @CELERITAS_CORE_GEO_CONFIG@
+
+@CELERITAS_CORE_RNG_CONFIG@
 
 #define CELERITAS_MAX_BLOCK_SIZE @CELERITAS_MAX_BLOCK_SIZE@
 

@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2022-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2022-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -65,6 +65,7 @@ TEST_F(PrimaryGeneratorTest, basic)
     inp.sample_pos = DeltaDistribution<Real3>(Real3{1, 2, 3});
     inp.sample_dir = IsotropicDistribution<real_type>();
     PrimaryGenerator generate_primaries(particles_, inp);
+    EXPECT_EQ(2, generate_primaries.num_events());
 
     std::vector<int> particle_id;
     std::vector<int> event_id;
@@ -89,7 +90,7 @@ TEST_F(PrimaryGeneratorTest, basic)
     auto primaries = generate_primaries();
     EXPECT_TRUE(primaries.empty());
 
-    static int const expected_particle_id[] = {0, 1, 0, 1, 0, 1};
+    static int const expected_particle_id[] = {0, 1, 0, 0, 1, 0};
     static int const expected_event_id[] = {0, 0, 0, 1, 1, 1};
     static int const expected_track_id[] = {0, 1, 2, 0, 1, 2};
 
@@ -111,6 +112,7 @@ TEST_F(PrimaryGeneratorTest, options)
     opts.direction = {DS::isotropic, {}};
 
     auto generate_primaries = PrimaryGenerator::from_options(particles_, opts);
+    EXPECT_EQ(1, generate_primaries.num_events());
     auto primaries = generate_primaries();
     EXPECT_EQ(10, primaries.size());
 

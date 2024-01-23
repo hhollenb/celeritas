@@ -1,5 +1,5 @@
 #----------------------------------*-CMake-*----------------------------------#
-# Copyright 2023 UT-Battelle, LLC, and other Celeritas developers.
+# Copyright 2023-2024 UT-Battelle, LLC, and other Celeritas developers.
 # See the top-level COPYRIGHT file for details.
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 #-----------------------------------------------------------------------------#
@@ -10,6 +10,7 @@ if(CELERITAS_USE_Geant4)
     ActionInitialization.cc
     DetectorConstruction.cc
     EventAction.cc
+    ExceptionHandler.cc
     GeantDiagnostics.cc
     GlobalSetup.cc
     HepMC3PrimaryGeneratorAction.cc

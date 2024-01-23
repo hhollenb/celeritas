@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2020-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2020-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -23,16 +23,6 @@ char const* to_cstring(ImportTableType value)
         "dedx",
         "range",
         "msc_xs",
-
-        "dedx_process",
-        "dedx_unrestricted",
-        "csda_range",
-
-        "dedx_subsec",
-        "ionization_subsec",
-        "secondary_range",
-        "inverse_range",
-        "sublambda",
     };
     return to_cstring_impl(value);
 }
@@ -46,12 +36,12 @@ char const* to_cstring(ImportUnits value)
     static EnumStringMapper<ImportUnits> const to_cstring_impl{
         "unitless",
         "MeV",
-        "MeV/cm",
-        "cm",
-        "1/cm",
-        "1/cm-MeV",
-        "MeV^2/cm",
-        "cm^2",
+        "MeV/len",
+        "len",
+        "1/len",
+        "1/len-MeV",
+        "MeV^2/len",
+        "len^2",
     };
     return to_cstring_impl(value);
 }

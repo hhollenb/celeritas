@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2020-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2020-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -21,13 +21,16 @@ namespace detail
 /*!
  * Initialize the RNG states from seeds randomly generated on host.
  */
-void rng_state_init(HostRef<CuHipRngStateData> const& rng,
+void rng_state_init(HostCRef<CuHipRngParamsData> const& params,
+                    HostRef<CuHipRngStateData> const& state,
                     HostCRef<CuHipRngInitData> const& seeds)
 {
     for (auto tid : range(TrackSlotId{seeds.size()}))
     {
-        CuHipRngEngine engine(rng, tid);
-        engine = seeds.seeds[tid];
+        CuHipRngInitializer init;
+        init.seed = seeds.seeds[tid];
+        CuHipRngEngine engine(params, state, tid);
+        engine = init;
     }
 }
 

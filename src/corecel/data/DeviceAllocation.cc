@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2020-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2020-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -34,7 +34,7 @@ DeviceAllocation::DeviceAllocation(size_type bytes) : size_{bytes}
     CELER_EXPECT(celeritas::device());
     void* ptr = nullptr;
     CELER_DEVICE_CALL_PREFIX(Malloc(&ptr, bytes));
-    data_.reset(static_cast<Byte*>(ptr));
+    data_.reset(static_cast<std::byte*>(ptr));
 }
 
 //---------------------------------------------------------------------------//
@@ -47,7 +47,7 @@ DeviceAllocation::DeviceAllocation(size_type bytes, StreamId stream)
     CELER_EXPECT(celeritas::device());
     void* ptr = celeritas::device().stream(stream_).malloc_async(bytes);
     CELER_ASSERT(ptr);
-    data_.reset(static_cast<Byte*>(ptr));
+    data_.reset(static_cast<std::byte*>(ptr));
 }
 
 //---------------------------------------------------------------------------//
@@ -105,7 +105,7 @@ void DeviceAllocation::copy_to_host(SpanBytes bytes) const
 //---------------------------------------------------------------------------//
 //! Deleter frees data: prevent exceptions
 void DeviceAllocation::DeviceFreeDeleter::operator()(
-    [[maybe_unused]] Byte* ptr) const noexcept(CELER_USE_DEVICE)
+    [[maybe_unused]] std::byte* ptr) const noexcept(CELER_USE_DEVICE)
 {
     try
     {

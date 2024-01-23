@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2020-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2020-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -158,8 +158,8 @@ template<class T>
 void DeviceVector<T>::copy_to_device(SpanConstT data)
 {
     CELER_EXPECT(data.size() == this->size());
-    allocation_.copy_to_device(
-        {reinterpret_cast<Byte const*>(data.data()), data.size() * sizeof(T)});
+    allocation_.copy_to_device({reinterpret_cast<std::byte const*>(data.data()),
+                                data.size() * sizeof(T)});
 }
 
 //---------------------------------------------------------------------------//
@@ -171,7 +171,7 @@ void DeviceVector<T>::copy_to_host(SpanT data) const
 {
     CELER_EXPECT(data.size() == this->size());
     allocation_.copy_to_host(
-        {reinterpret_cast<Byte*>(data.data()), data.size() * sizeof(T)});
+        {reinterpret_cast<std::byte*>(data.data()), data.size() * sizeof(T)});
 }
 
 //---------------------------------------------------------------------------//

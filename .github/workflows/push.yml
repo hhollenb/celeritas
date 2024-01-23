@@ -16,8 +16,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-fast:
+    uses: ./.github/workflows/build-fast.yml
+  build-full:
     uses: ./.github/workflows/build-full.yml
-  # TODO: build and push documentation
+  doc:
+    uses: ./.github/workflows/doc.yml
+  all:
+    needs: [build-fast, build-full, doc]
+    runs-on: ubuntu-latest
+    steps:
+    - name: Success
+      run: "true"
 
 # vim: set nowrap tw=100:

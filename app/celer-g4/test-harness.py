@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2023 UT-Battelle, LLC, and other Celeritas developers.
+# Copyright 2023-2024 UT-Battelle, LLC, and other Celeritas developers.
 # See the top-level COPYRIGHT file for details.
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 """
@@ -71,7 +71,6 @@ inp = {
     "output_file": out_file,
     "offload_output_file": offload_file,
     "num_track_slots": max_tracks,
-    "max_events": 1024,
     "initializer_capacity": init_capacity,
     "secondary_stack_factor": 2,
     "physics_list": "ftfp_bert",
@@ -91,14 +90,64 @@ inp = {
 with open(inp_file, "w") as f:
     json.dump(inp, f, indent=1)
 
+kwargs = {}
+if use_celeritas:
+    # IO through streams should work with celeritas or g4 as driver, but just
+    # do it here as an example
+    inp_file = "-"
+    inp["output_file"] = "-"
+    env = dict(environ)
+    kwargs = dict(
+        input=json.dumps(inp).encode(),
+        stdout=subprocess.PIPE,
+        env=env,
+    )
+
+
 print("Running", exe, inp_file, file=stderr)
-result = subprocess.run([exe, inp_file])
+result = subprocess.run([exe, inp_file], **kwargs)
+
+if use_celeritas:
+    # Decode the output, fail if the run failed
+    out_text = result.stdout.decode()
+    try:
+        j = json.loads(out_text)
+    except json.decoder.JSONDecodeError as e:
+        print(f"error ({e}): expected a JSON object but got the following stdout:")
+        with open(out_file, 'w') as f:
+            f.write(out_text)
+        print("Wrote text to", out_file)
+        if result.returncode:
+            print("fatal:", str(e))
+            exit(result.returncode)
+    else:
+        with open(out_file, 'w') as f:
+            json.dump(j, f, indent=1)
 
 if result.returncode:
     print("fatal: run failed with error", result.returncode)
+    if use_celeritas:
+        try:
+            j = json.loads(result.stdout.decode())
+        except:
+            pass
+        else:
+            outfilename = f'{run_name}.out.failed.json'
+            with open(outfilename, 'w') as f:
+                json.dump(j, f, indent=1)
+            print("Failure written to", outfilename, file=stderr)
+            j = {}
+
     exit(result.returncode)
 
-with open(out_file) as f:
-    result = json.load(f)
+if not use_celeritas:
+    # Load written file
+    with open(out_file) as f:
+        j = json.load(f)
 
-pprint(result["result"])
+    # Rewrite with indentation
+    with open(out_file, 'w') as f:
+        json.dump(j, f, indent=1)
+
+pprint(j["result"])
+

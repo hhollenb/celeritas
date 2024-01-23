@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2021-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2021-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -59,28 +59,9 @@ using CuHipRngThreadState = CELER_RNG_PREFIX(randState_t);
 //---------------------------------------------------------------------------//
 /*!
  * Properties of the global random number generator.
- *
- * There is no persistent data needed on device or at runtime: the params are
- * only used for construction.
  */
 template<Ownership W, MemSpace M>
-struct CuHipRngParamsData;
-
-template<Ownership W>
-struct CuHipRngParamsData<W, MemSpace::device>
-{
-    /* no data on device */
-
-    //! Assign from another set of data
-    template<Ownership W2, MemSpace M2>
-    CuHipRngParamsData& operator=(CuHipRngParamsData<W2, M2> const&)
-    {
-        return *this;
-    }
-};
-
-template<Ownership W>
-struct CuHipRngParamsData<W, MemSpace::host>
+struct CuHipRngParamsData
 {
     //// DATA ////
 
@@ -106,7 +87,9 @@ struct CuHipRngParamsData<W, MemSpace::host>
  */
 struct CuHipRngInitializer
 {
-    ull_int seed;
+    ull_int seed{0};
+    ull_int subsequence{0};
+    ull_int offset{0};
 };
 
 //---------------------------------------------------------------------------//

@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2023-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -71,8 +71,7 @@ class CylAligned
     //@{
     //! \name Type aliases
     using Intersections = Array<real_type, 2>;
-    using StorageSpan = Span<const real_type, 3>;
-    using Storage = StorageSpan;  // DEPRECATED
+    using StorageSpan = Span<real_type const, 3>;
     //@}
 
   private:
@@ -123,7 +122,7 @@ class CylAligned
     CELER_FUNCTION real_type radius_sq() const { return radius_sq_; }
 
     //! Get a view to the data for type-deleted storage
-    CELER_FUNCTION Storage data() const { return {&origin_u_, 3}; }
+    CELER_FUNCTION StorageSpan data() const { return {&origin_u_, 3}; }
 
     // Helper function to get the origin as a 3-vector
     Real3 calc_origin() const;
@@ -224,7 +223,7 @@ CylAligned<T>::calc_intersections(Real3 const& pos,
     -> Intersections
 {
     // 1 - \omega \dot e
-    const real_type a = 1 - ipow<2>(dir[to_int(T)]);
+    real_type const a = 1 - ipow<2>(dir[to_int(T)]);
 
     if (a < ipow<2>(Tolerance<>::sqrt_quadratic()))
     {
@@ -232,8 +231,8 @@ CylAligned<T>::calc_intersections(Real3 const& pos,
         return {no_intersection(), no_intersection()};
     }
 
-    const real_type u = pos[to_int(U)] - origin_u_;
-    const real_type v = pos[to_int(V)] - origin_v_;
+    real_type const u = pos[to_int(U)] - origin_u_;
+    real_type const v = pos[to_int(V)] - origin_v_;
 
     // b/2 = \omega \dot (x - x_0)
     detail::QuadraticSolver solve_quadric(
@@ -260,8 +259,7 @@ CELER_FUNCTION Real3 CylAligned<T>::calc_normal(Real3 const& pos) const
     norm[to_int(U)] = pos[to_int(U)] - origin_u_;
     norm[to_int(V)] = pos[to_int(V)] - origin_v_;
 
-    normalize_direction(&norm);
-    return norm;
+    return make_unit_vector(norm);
 }
 
 //---------------------------------------------------------------------------//

@@ -1,5 +1,5 @@
 #----------------------------------*-CMake-*----------------------------------#
-# Copyright 2020-2023 UT-Battelle, LLC, and other Celeritas developers.
+# Copyright 2020-2024 UT-Battelle, LLC, and other Celeritas developers.
 # See the top-level COPYRIGHT file for details.
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 #-----------------------------------------------------------------------------#
@@ -35,8 +35,9 @@ set(_DOXYGEN_EXTRA_SOURCE
   "${PROJECT_BINARY_DIR}/include/celeritas_cmake_strings.h"
   "${PROJECT_BINARY_DIR}/include/celeritas_version.h"
 )
-if(CELERITAS_DEBUG AND CELERITAS_BUILD_TESTS)
-  # Add documentation for Celeritas test harnesses
+if((CELERITAS_DEBUG AND CELERITAS_BUILD_TESTS)
+  OR CELERITAS_DOXYGEN_BUILD_TESTS)
+  # Add documentation for Celeritas test harnesses when debugging or for CI
   list(APPEND _DOXYGEN_TEST_SOURCE
     "${PROJECT_SOURCE_DIR}/test"
   )
@@ -47,6 +48,8 @@ else()
   set(_DOXYGEN_TEST_SOURCE)
 endif()
 
+celeritas_version_to_hex(_doxy_version_hex DOXYGEN_VERSION)
+
 # Documentation usage
 set(DOXYGEN_FULL_PATH_NAMES NO)
 set(DOXYGEN_MACRO_EXPANSION YES)
@@ -56,17 +59,12 @@ set(DOXYGEN_DISTRIBUTE_GROUP_DOC YES)
 set(DOXYGEN_USE_MDFILE_AS_MAINPAGE "${PROJECT_SOURCE_DIR}/README.md")
 set(DOXYGEN_FORMULA_MACROFILE "${CMAKE_CURRENT_SOURCE_DIR}/_static/macros.tex")
 set(DOXYGEN_EXTRA_PACKAGES "amsmath")
-set(DOXYGEN_PREDEFINED "__DOXYGEN__")
+set(DOXYGEN_PREDEFINED "__DOXYGEN__=${_doxy_version_hex}")
 set(DOXYGEN_USE_MATHJAX YES)
 
 # Verbosity/warning levels
-if(NOT DEFINED DOXYGEN_QUIET)
-  set(DOXYGEN_QUIET YES)
-endif()
-if(NOT DEFINED DOXYGEN_WARN_IF_UNDOCUMENTED)
-  # Missing parameters and members have many false positives
-  set(DOXYGEN_WARN_IF_UNDOCUMENTED NO)
-endif()
+celeritas_set_default(DOXYGEN_QUIET YES)
+celeritas_set_default(DOXYGEN_WARN_IF_UNDOCUMENTED NO)
 
 # Output options
 set(DOXYGEN_PROJECT_LOGO
@@ -76,8 +74,10 @@ set(DOXYGEN_HTML_EXTRA_STYLESHEET
 set(DOXYGEN_GENERATE_HTML YES)
 set(DOXYGEN_HTML_OUTPUT "doxygen-html")
 set(DOXYGEN_CREATE_SUBDIRS YES)
-set(DOXYGEN_VERBATIM_HEADERS NO)
 set(DOXYGEN_REFERENCES_LINK_SOURCE YES)
+
+celeritas_set_default(DOXYGEN_VERBATIM_HEADERS NO)
+celeritas_set_default(DOXYGEN_MAX_DOT_GRAPH_DEPTH 2)
 
 doxygen_add_docs(doxygen
   "${PROJECT_SOURCE_DIR}/src"
@@ -237,8 +237,8 @@ celeritas_build_sphinx(latex "${_doc_tex}")
 if(Sphinx_FOUND)
   # Download ornltm class
   ExternalProject_Add(ornltm
-    GIT_REPOSITORY https://code.ornl.gov/s3j/ornltm.git
-    GIT_TAG 05a4b22f104abd53ac7cae72fe03768710b56b86
+    GIT_REPOSITORY https://code.ornl.gov/sethrj/ornltm.git
+    GIT_TAG c9d2ddcce2bfc8d7d51db8f4a131d71883f46528
     CONFIGURE_COMMAND ""
     BUILD_COMMAND ""
     INSTALL_COMMAND ""

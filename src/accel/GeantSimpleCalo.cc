@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2023-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -7,6 +7,7 @@
 //---------------------------------------------------------------------------//
 #include "GeantSimpleCalo.hh"
 
+#include "celeritas_config.h"
 #include "corecel/cont/Range.hh"
 #include "corecel/io/Logger.hh"
 #include "celeritas/ext/GeantGeoParams.hh"
@@ -16,7 +17,6 @@
 #include "SharedParams.hh"
 #include "detail/GeantSimpleCaloSD.hh"
 #include "detail/GeantSimpleCaloStorage.hh"
-
 #if CELERITAS_USE_JSON
 #    include <nlohmann/json.hpp>
 

@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2023-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -79,23 +79,13 @@ void CoreState<M>::insert_primaries(Span<Primary const> host_primaries)
 
 //---------------------------------------------------------------------------//
 /*!
- * Reference to the ActionThread collection matching the state memory space
- */
-template<MemSpace M>
-auto CoreState<M>::native_action_thread_offsets() -> ActionThreads<M>&
-{
-    return thread_offsets_;
-}
-
-//---------------------------------------------------------------------------//
-/*!
  * Get a range delimiting the [start, end) of the track partition assigned
  * action_id in track_slots
  */
 template<MemSpace M>
 Range<ThreadId> CoreState<M>::get_action_range(ActionId action_id) const
 {
-    auto const& thread_offsets = action_thread_offsets();
+    auto const& thread_offsets = offsets_.host_action_thread_offsets();
     CELER_EXPECT((action_id + 1) < thread_offsets.size());
     return {thread_offsets[action_id], thread_offsets[action_id + 1]};
 }
@@ -107,11 +97,7 @@ Range<ThreadId> CoreState<M>::get_action_range(ActionId action_id) const
 template<MemSpace M>
 void CoreState<M>::num_actions(size_type n)
 {
-    resize(&thread_offsets_, n);
-    if constexpr (M == MemSpace::device)
-    {
-        resize(&host_thread_offsets_, n);
-    }
+    offsets_.resize(n);
 }
 
 //---------------------------------------------------------------------------//
@@ -121,7 +107,7 @@ void CoreState<M>::num_actions(size_type n)
 template<MemSpace M>
 size_type CoreState<M>::num_actions() const
 {
-    return thread_offsets_.size();
+    return offsets_.host_action_thread_offsets().size();
 }
 
 //---------------------------------------------------------------------------//

@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2023-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -85,8 +85,8 @@ class WentzelModel final : public Model
 
     //!@{
     //! Access model data
-    WentzelHostRef const& host_ref() const { return data_.host(); }
-    WentzelDeviceRef const& device_ref() const { return data_.device(); }
+    WentzelHostRef const& host_ref() const { return data_.host_ref(); }
+    WentzelDeviceRef const& device_ref() const { return data_.device_ref(); }
     //!@}
 
   private:

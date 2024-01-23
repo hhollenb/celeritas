@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2022-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2022-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -9,6 +9,7 @@
 
 #include <string>
 
+#include "corecel/io/JsonUtils.json.hh"
 #include "corecel/io/StringEnumMapper.hh"
 #include "corecel/math/QuantityIO.json.hh"
 
@@ -62,13 +63,10 @@ void to_json(nlohmann::json& j, RelaxationSelection const& value)
  */
 void from_json(nlohmann::json const& j, GeantPhysicsOptions& options)
 {
+#define GPO_LOAD_OPTION(NAME) CELER_JSON_LOAD_OPTION(j, options, NAME)
+
     options = {};
-#define GPO_LOAD_OPTION(NAME)                 \
-    do                                        \
-    {                                         \
-        if (j.contains(#NAME))                \
-            j.at(#NAME).get_to(options.NAME); \
-    } while (0)
+
     GPO_LOAD_OPTION(coulomb_scattering);
     GPO_LOAD_OPTION(compton_scattering);
     GPO_LOAD_OPTION(photoelectric);
@@ -108,8 +106,10 @@ void from_json(nlohmann::json const& j, GeantPhysicsOptions& options)
  */
 void to_json(nlohmann::json& j, GeantPhysicsOptions const& options)
 {
+#define GPO_SAVE_OPTION(NAME) CELER_JSON_SAVE(j, options, NAME)
+
     j = nlohmann::json::object();
-#define GPO_SAVE_OPTION(NAME) j[#NAME] = options.NAME
+
     GPO_SAVE_OPTION(coulomb_scattering);
     GPO_SAVE_OPTION(compton_scattering);
     GPO_SAVE_OPTION(photoelectric);

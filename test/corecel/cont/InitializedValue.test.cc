@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2023-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -23,8 +23,8 @@ TEST(InitializedValue, no_finalizer)
 
     // Use operator new to test that the int is being initialized properly by
     // constructing into data space that's been set to a different value
-    alignas(int) Byte buf[sizeof(InitValueInt)];
-    std::fill(std::begin(buf), std::end(buf), Byte(-1));
+    alignas(int) std::byte buf[sizeof(InitValueInt)];
+    std::fill(std::begin(buf), std::end(buf), std::byte(-1));
     InitValueInt* ival = new (buf) InitValueInt{};
     EXPECT_EQ(0, *ival);
 

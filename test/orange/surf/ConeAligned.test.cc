@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2023-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -66,11 +66,8 @@ TEST(ConeAlignedTest, normal)
 {
     ConeX cone{{2, 3, 4}, 0.5};
 
-    Real3 pos{2 + 2, 3 + 1, 4 + 0};
-
-    Real3 expected{-1, 2, 0};
-    normalize_direction(&expected);
-    EXPECT_VEC_SOFT_EQ(expected, cone.calc_normal(pos));
+    EXPECT_VEC_SOFT_EQ(make_unit_vector(Real3{-1, 2, 0}),
+                       cone.calc_normal({2 + 2, 3 + 1, 4 + 0}));
 }
 
 TEST(ConeAlignedTest, intersection_typical)
@@ -103,8 +100,7 @@ TEST(ConeAlignedTest, intersection_along_surface)
     ConeX cone{{1.1, 2.2, 3.3}, 2. / 3.};
 
     // Along the cone edge heading up and right
-    Real3 dir{3.0, 2.0, 0.0};
-    normalize_direction(&dir);
+    Real3 dir = make_unit_vector(Real3{3.0, 2.0, 0.0});
 
     // Below lower left sheet
     Real3 pos{1.1 - 3, 2.2 - 2 - 1, 3.3};
@@ -191,10 +187,10 @@ TEST(ConeAlignedTest, degenerate_boundary)
         {
             SCOPED_TRACE(eps < 0 ? "neg" : eps > 0 ? "pos" : "zero");
 
-            const real_type tol = std::max(1.e-14, std::fabs(eps));
+            real_type const tol = std::max(1.e-14, std::fabs(eps));
 
             // Distance across the cone at the current point
-            const real_type diameter = 2 * std::fabs(z) * radius;
+            real_type const diameter = 2 * std::fabs(z) * radius;
 
             Real3 pos = origin;
             // Move so that the circular cross section looks like an equivalent

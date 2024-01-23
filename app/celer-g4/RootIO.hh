@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2023-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -35,14 +35,6 @@ class RootIO
     friend class G4ThreadLocalSingleton<RootIO>;
 
   public:
-#if CELERITAS_USE_ROOT
-    // Whether ROOT output is enabled
-    static bool use_root();
-#else
-    // ROOT is never enabled if ROOT isn't available
-    constexpr static bool use_root() { return false; }
-#endif
-
     // Return non-owning pointer to a singleton
     static RootIO* Instance();
 

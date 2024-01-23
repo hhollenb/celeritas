@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2022-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2022-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -8,15 +8,24 @@
 #include "LocalTransporter.hh"
 
 #include <csignal>
+#include <string>
 #include <type_traits>
 #include <CLHEP/Units/SystemOfUnits.h>
+#include <G4MTRunManager.hh>
 #include <G4ParticleDefinition.hh>
+#include <G4Threading.hh>
 #include <G4ThreeVector.hh>
 #include <G4Track.hh>
 
+#ifdef _OPENMP
+#    include <omp.h>
+#endif
+
+#include "celeritas_config.h"
 #include "corecel/cont/Span.hh"
 #include "corecel/io/Logger.hh"
 #include "corecel/sys/Device.hh"
+#include "corecel/sys/Environment.hh"
 #include "corecel/sys/ScopedSignalHandler.hh"
 #include "celeritas/Quantities.hh"
 #include "celeritas/ext/Convert.geant.hh"
@@ -62,6 +71,29 @@ LocalTransporter::LocalTransporter(SetupOptions const& options,
         << ") is out of range for the reported number of worker threads ("
         << params.Params()->max_streams() << ")");
 
+    // Check that OpenMP and Geant4 threading models don't collide
+    if (CELERITAS_USE_OPENMP && !celeritas::device()
+        && G4Threading::IsMultithreadedApplication())
+    {
+        auto msg = CELER_LOG_LOCAL(warning);
+        msg << "Using multithreaded Geant4 with Celeritas OpenMP";
+        if (std::string const& nt_str = celeritas::getenv("OMP_NUM_THREADS");
+            !nt_str.empty())
+        {
+            msg << "(OMP_NUM_THREADS=" << nt_str
+                << "): CPU threads may be oversubscribed";
+        }
+        else
+        {
+            msg << ": forcing 1 Celeritas thread to Geant4 thread";
+#ifdef _OPENMP
+            omp_set_num_threads(1);
+#else
+            CELER_ASSERT_UNREACHABLE();
+#endif
+        }
+    }
+
     StepperInput inp;
     inp.params = params.Params();
     inp.stream_id = StreamId{static_cast<size_type>(thread_id)};
@@ -83,14 +115,24 @@ LocalTransporter::LocalTransporter(SetupOptions const& options,
 
 //---------------------------------------------------------------------------//
 /*!
- * Set the event ID at the start of an event.
+ * Set the event ID and reseed the Celeritas RNG at the start of an event.
  */
-void LocalTransporter::SetEventId(int id)
+void LocalTransporter::InitializeEvent(int id)
 {
     CELER_EXPECT(*this);
     CELER_EXPECT(id >= 0);
+
     event_id_ = EventId(id);
     track_counter_ = 0;
+
+    if (!(G4Threading::IsMultithreadedApplication()
+          && G4MTRunManager::SeedOncePerCommunication()))
+    {
+        // Since Geant4 schedules events dynamically, reseed the Celeritas RNGs
+        // using the Geant4 event ID for reproducibility. This guarantees that
+        // an event can be reproduced given the event ID.
+        step_->reseed(event_id_);
+    }
 }
 
 //---------------------------------------------------------------------------//

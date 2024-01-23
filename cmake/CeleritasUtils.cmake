@@ -1,5 +1,5 @@
 #----------------------------------*-CMake-*----------------------------------#
-# Copyright 2020-2023 UT-Battelle, LLC, and other Celeritas developers.
+# Copyright 2020-2024 UT-Battelle, LLC, and other Celeritas developers.
 # See the top-level COPYRIGHT file for details.
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 #[=======================================================================[.rst:
@@ -25,7 +25,9 @@ CMake configuration utility functions for Celeritas.
 
   This won't be used for all Celeritas options or even all external dependent
   packages. If given, the ``<find_package>`` package name will searched for
-  instead of ``<package>``.
+  instead of ``<package>``, and an ``@`` symbol can be used to find a specific
+  version (e.g. ``Geant4@11.0``) which will be passed to the ``find_package``
+  command.
 
 .. command:: celeritas_set_default
 
@@ -131,6 +133,16 @@ CMake configuration utility functions for Celeritas.
   unavailable options (e.g. CELERITAS_USE_CURAND when HIP is in use) will
   implicitly be zero.
 
+.. command:: celeritas_version_to_hex
+
+  Convert a version number to a C-formatted hexadecimal string.
+
+    celeritas_version_to_hex(<var> <version_prefix>)
+
+    The code will set a version to zero if ``<version_prefix>_VERSION`` is not
+    found. If ``<version_prefix>_MAJOR`` is defined it will use that; otherwise
+    it will try to split the version into major/minor/patch.
+
 #]=======================================================================]
 include_guard(GLOBAL)
 
@@ -173,9 +185,15 @@ endfunction()
 macro(celeritas_optional_package package)
   if("${ARGC}" EQUAL 2)
     set(_findpkg "${package}")
+    set(_findversion)
     set(_docstring "${ARGV1}")
   else()
     set(_findpkg "${ARGV1}")
+    set(_findversion)
+    if(_findpkg MATCHES "([^@]+)@([^@]+)")
+      set(_findpkg ${CMAKE_MATCH_1})
+      set(_findversion ${CMAKE_MATCH_2})
+    endif()
     set(_docstring "${ARGV2}")
   endif()
 
@@ -186,7 +204,7 @@ macro(celeritas_optional_package package)
     set(_reset_found OFF)
     list(GET _findpkg 0 _findpkg)
     if(NOT DEFINED ${_findpkg}_FOUND)
-      find_package(${_findpkg} QUIET)
+      find_package(${_findpkg} ${_findversion} QUIET)
       set(_reset_found ON)
     endif()
     celeritas_to_onoff(_val ${${_findpkg}_FOUND})
@@ -412,6 +430,37 @@ function(celeritas_generate_option_config var)
 
   # Set in parent scope
   set(${var}_CONFIG "${_result}" PARENT_SCOPE)
+endfunction()
+
+#-----------------------------------------------------------------------------#
+
+function(celeritas_version_to_hex var version)
+  if(NOT DEFINED "${version}_MAJOR" AND DEFINED "${version}")
+    # Split version into components
+    string(REGEX MATCH "^([0-9]+)\\.([0-9]+)\\.([0-9]+)" _match "${${version}}")
+    if(NOT _match)
+      message(AUTHOR_WARNING
+        "Failed to parse version string for ${version}=\"${${version}}\":
+        _match=${_match}"
+      )
+    endif()
+    set(${version}_MAJOR "${CMAKE_MATCH_1}")
+    set(${version}_MINOR "${CMAKE_MATCH_2}")
+    set(${version}_PATCH "${CMAKE_MATCH_3}")
+  endif()
+  # Set any empty or undefined values to zero
+  foreach(_ext MAJOR MINOR PATCH)
+    if(NOT ${version}_${_ext})
+      set(${version}_${_ext} 0)
+    endif()
+  endforeach()
+  # Add an extra 1 up front and strip it to zero-pad
+  math(EXPR _temp_version
+    "((256 + ${${version}_MAJOR}) * 256 + ${${version}_MINOR}) * 256 + ${${version}_PATCH}"
+    OUTPUT_FORMAT HEXADECIMAL
+  )
+  string(SUBSTRING "${_temp_version}" 3 -1 _temp_version)
+  set(${var} "0x${_temp_version}" PARENT_SCOPE)
 endfunction()
 
 #-----------------------------------------------------------------------------#

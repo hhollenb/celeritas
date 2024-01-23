@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2021-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2021-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -40,7 +40,7 @@ namespace celeritas
  *
  *     const CollectionDeviceRef& device_ref() const
  *     {
- *         return data_.device();
+ *         return data_.device_ref();
  *     }
  *   private:
  *     CollectionMirror<FooData> data_;
@@ -67,12 +67,6 @@ class CollectionMirror : public ParamsDataInterface<P>
 
     //! Whether the data is assigned
     explicit operator bool() const { return static_cast<bool>(host_); }
-
-    //!@{
-    //! Deprecated alias to ref
-    HostRef const& host() const { return this->host_ref(); }
-    DeviceRef const& device() const { return this->device_ref(); }
-    //!@}
 
     //! Access data on host
     HostRef const& host_ref() const final { return host_ref_; }

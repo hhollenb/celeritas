@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2023-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -254,10 +254,8 @@ template<class HP>
 auto GenericGeoTestBase<HP>::make_geo_track_view(Real3 const& pos, Real3 dir)
     -> GeoTrackView
 {
-    normalize_direction(&dir);
-
     auto geo = this->make_geo_track_view();
-    geo = GeoTrackInitializer{pos, dir};
+    geo = GeoTrackInitializer{pos, make_unit_vector(dir)};
     return geo;
 }
 

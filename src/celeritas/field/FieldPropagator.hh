@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2020-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2020-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -101,7 +101,7 @@ class FieldPropagator
 //---------------------------------------------------------------------------//
 template<class DriverT, class GTV>
 CELER_FUNCTION FieldPropagator(DriverT&&, ParticleTrackView const&, GTV&&)
-    ->FieldPropagator<DriverT, GTV>;
+    -> FieldPropagator<DriverT, GTV>;
 
 //---------------------------------------------------------------------------//
 // INLINE DEFINITIONS
@@ -312,8 +312,7 @@ CELER_FUNCTION auto FieldPropagator<DriverT, GTV>::operator()(real_type step)
     // Even though the along-substep movement was through chord lengths,
     // conserve momentum through the field change by updating the final
     // *direction* based on the state's momentum.
-    Real3 dir = state_.mom;
-    normalize_direction(&dir);
+    Real3 dir = make_unit_vector(state_.mom);
     geo_.set_dir(dir);
 
     if (CELER_UNLIKELY(result.distance == 0))

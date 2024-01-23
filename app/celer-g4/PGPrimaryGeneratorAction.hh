@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2022-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2022-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -58,8 +58,7 @@ class PGPrimaryGeneratorAction final : public G4VUserPrimaryGeneratorAction
     EnergySampler sample_energy_;
     PositionSampler sample_pos_;
     DirectionSampler sample_dir_;
-    size_type primary_count_{0};
-    size_type event_count_{0};
+    size_type seed_{0};
 };
 
 //---------------------------------------------------------------------------//

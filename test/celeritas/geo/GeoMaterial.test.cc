@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2020-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2020-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -55,8 +55,7 @@ auto GeoMaterialTestBase::trace_materials(Real3 const& pos, Real3 dir)
     // comparison of material IDs encountered.
     VecString result;
 
-    normalize_direction(&dir);
-    geo = {pos, dir};
+    geo = {pos, make_unit_vector(dir)};
     while (!geo.is_outside())
     {
         result.push_back(

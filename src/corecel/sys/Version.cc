@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2023-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -11,11 +11,9 @@
 #include <iostream>
 #include <regex>
 
+#include "celeritas_version.h"
 #include "corecel/Assert.hh"
 #include "corecel/io/Join.hh"
-
-using std::cout;
-using std::endl;
 
 namespace celeritas
 {
@@ -25,7 +23,7 @@ namespace celeritas
  */
 Version Version::from_string(std::string_view sv)
 {
-    static const std::regex version_regex{
+    static std::regex const version_regex{
         R"re(^(\d+)(?:\.(\d+)(?:\.(\d+)(?:\.\d+)*)?)?(?:-.*)?)re"};
     std::match_results<std::string_view::iterator> version_match;
     bool matched
@@ -55,6 +53,26 @@ std::ostream& operator<<(std::ostream& os, Version const& v)
 {
     os << join(v.value().begin(), v.value().end(), '.');
     return os;
+}
+
+//---------------------------------------------------------------------------//
+//! Save as a string
+std::string to_string(Version const& v)
+{
+    std::ostringstream os;
+    os << v;
+    return os.str();
+}
+
+//---------------------------------------------------------------------------//
+/*!
+ * Get the Celeritas version.
+ */
+Version celer_version()
+{
+    return {celeritas_version_major,
+            celeritas_version_minor,
+            celeritas_version_patch};
 }
 
 //---------------------------------------------------------------------------//

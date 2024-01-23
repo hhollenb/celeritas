@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2022-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2022-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -36,6 +36,14 @@ StepperTestBase::StepperTestBase()
     dummy_action_ = std::make_shared<DummyAction>(
         action_reg.next_id(), "dummy-action", desc);
     action_reg.insert(dummy_action_);
+}
+
+//---------------------------------------------------------------------------//
+//! Whether the build uses the default real type and RNG.
+bool StepperTestBase::is_default_build()
+{
+    return CELERITAS_REAL_TYPE == CELERITAS_REAL_TYPE_DOUBLE
+           && CELERITAS_CORE_RNG == CELERITAS_CORE_RNG_XORWOW;
 }
 
 //---------------------------------------------------------------------------//
@@ -99,7 +107,7 @@ auto StepperTestBase::run(StepperInterface& step,
     result.active = {counts.active};
     result.queued = {counts.queued};
 
-    const size_type max_steps = this->max_average_steps() * num_primaries;
+    size_type const max_steps = this->max_average_steps() * num_primaries;
     size_type accum_steps = counts.active;
 
     while (counts)

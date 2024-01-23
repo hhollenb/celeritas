@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2022-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2022-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -61,6 +61,7 @@ char const* to_cstring(TrackOrder value)
         "sort_along_step_action",
         "sort_step_limit_action",
         "sort_action",
+        "sort_particle_type",
     };
     return to_cstring_impl(value);
 }

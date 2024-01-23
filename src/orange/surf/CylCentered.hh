@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2021-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2021-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -42,8 +42,7 @@ class CylCentered
     //@{
     //! \name Type aliases
     using Intersections = Array<real_type, 2>;
-    using StorageSpan = Span<const real_type, 1>;
-    using Storage = StorageSpan;  // DEPRECATED
+    using StorageSpan = Span<real_type const, 1>;
     //@}
 
   private:
@@ -85,7 +84,7 @@ class CylCentered
     CELER_FUNCTION real_type radius_sq() const { return radius_sq_; }
 
     //! Get a view to the data for type-deleted storage
-    CELER_FUNCTION Storage data() const { return {&radius_sq_, 1}; }
+    CELER_FUNCTION StorageSpan data() const { return {&radius_sq_, 1}; }
 
     //// CALCULATION ////
 
@@ -163,7 +162,8 @@ CELER_FUNCTION CylCentered<T>::CylCentered(real_type radius)
  */
 template<Axis T>
 template<class R>
-CELER_FUNCTION CylCentered<T>::CylCentered(Span<R, StorageSpan::extent> data) : radius_sq_(data[0])
+CELER_FUNCTION CylCentered<T>::CylCentered(Span<R, StorageSpan::extent> data)
+    : radius_sq_(data[0])
 {
 }
 
@@ -174,8 +174,8 @@ CELER_FUNCTION CylCentered<T>::CylCentered(Span<R, StorageSpan::extent> data) : 
 template<Axis T>
 CELER_FUNCTION SignedSense CylCentered<T>::calc_sense(Real3 const& pos) const
 {
-    const real_type u = pos[to_int(U)];
-    const real_type v = pos[to_int(V)];
+    real_type const u = pos[to_int(U)];
+    real_type const v = pos[to_int(V)];
 
     return real_to_sense(ipow<2>(u) + ipow<2>(v) - radius_sq_);
 }
@@ -192,7 +192,7 @@ CylCentered<T>::calc_intersections(Real3 const& pos,
     -> Intersections
 {
     // 1 - (\omega \dot t)^2 where t is axis of cylinder
-    const real_type a = 1 - ipow<2>(dir[to_int(T)]);
+    real_type const a = 1 - ipow<2>(dir[to_int(T)]);
 
     if (a < ipow<2>(Tolerance<>::sqrt_quadratic()))
     {
@@ -200,8 +200,8 @@ CylCentered<T>::calc_intersections(Real3 const& pos,
         return {no_intersection(), no_intersection()};
     }
 
-    const real_type u = pos[to_int(U)];
-    const real_type v = pos[to_int(V)];
+    real_type const u = pos[to_int(U)];
+    real_type const v = pos[to_int(V)];
 
     // b/2 = \omega \dot (x - x_0)
     detail::QuadraticSolver solve_quadric(
@@ -228,8 +228,7 @@ CELER_FUNCTION Real3 CylCentered<T>::calc_normal(Real3 const& pos) const
     norm[to_int(U)] = pos[to_int(U)];
     norm[to_int(V)] = pos[to_int(V)];
 
-    normalize_direction(&norm);
-    return norm;
+    return make_unit_vector(norm);
 }
 
 //---------------------------------------------------------------------------//

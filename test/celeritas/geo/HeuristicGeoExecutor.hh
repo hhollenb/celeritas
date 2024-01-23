@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2022-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2022-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -52,7 +52,7 @@ struct HeuristicGeoExecutor
  */
 CELER_FUNCTION void HeuristicGeoExecutor::operator()(TrackSlotId tid) const
 {
-    RngEngine rng(state.rng, tid);
+    RngEngine rng(params.rng, state.rng, tid);
     GeoTrackView geo(params.geometry, state.geometry, tid);
     if (state.status[tid] == LifeStatus::unborn)
     {

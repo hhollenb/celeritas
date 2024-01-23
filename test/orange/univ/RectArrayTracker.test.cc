@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2021-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2021-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -70,10 +70,9 @@ class RectArrayTrackerTest : public OrangeGeoTestBase
  */
 LocalState RectArrayTrackerTest::make_state(Real3 pos, Real3 dir)
 {
-    normalize_direction(&dir);
     LocalState state;
     state.pos = pos;
-    state.dir = dir;
+    state.dir = make_unit_vector(dir);
     state.volume = {};
     state.surface = {};
 

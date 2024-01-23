@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2022-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2022-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -48,6 +48,11 @@ void from_json(nlohmann::json const& j, DistributionOptions& opts)
 
 void to_json(nlohmann::json& j, DistributionOptions const& opts)
 {
+    if (!opts)
+    {
+        j = nlohmann::json::object();
+        return;
+    }
     j = nlohmann::json{{"distribution", opts.distribution},
                        {"params", opts.params}};
 }

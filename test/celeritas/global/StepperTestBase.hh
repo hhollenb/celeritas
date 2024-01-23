@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2022-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2022-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -54,6 +54,9 @@ class StepperTestBase : virtual public GlobalTestBase
         // Print code for the expected attributes
         void print_expected() const;
     };
+
+    // Whether the build uses the default real type and RNG
+    static bool is_default_build();
 
     struct RunResult
     {

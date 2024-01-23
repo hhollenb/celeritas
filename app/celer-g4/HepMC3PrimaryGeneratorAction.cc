@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2022-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2022-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -10,6 +10,7 @@
 #include <G4Event.hh>
 
 #include "corecel/Macros.hh"
+#include "accel/ExceptionConverter.hh"
 #include "accel/HepMC3PrimaryGenerator.hh"
 
 #include "GlobalSetup.hh"
@@ -34,7 +35,9 @@ HepMC3PrimaryGeneratorAction::HepMC3PrimaryGeneratorAction(SPGenerator gen)
  */
 void HepMC3PrimaryGeneratorAction::GeneratePrimaries(G4Event* event)
 {
-    generator_->GeneratePrimaryVertex(event);
+    ExceptionConverter call_g4exception{"celer0000"};
+    CELER_TRY_HANDLE(generator_->GeneratePrimaryVertex(event),
+                     call_g4exception);
 }
 
 //---------------------------------------------------------------------------//

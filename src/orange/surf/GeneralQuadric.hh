@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2021-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2021-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -41,9 +41,8 @@ class GeneralQuadric
     //@{
     //! Type aliases
     using Intersections = Array<real_type, 2>;
-    using StorageSpan = Span<const real_type, 10>;
-    using Storage = StorageSpan;  // DEPRECATED
-    using SpanConstReal3 = Span<const real_type, 3>;
+    using StorageSpan = Span<real_type const, 10>;
+    using SpanConstReal3 = Span<real_type const, 3>;
     //@}
 
     //// CLASS ATTRIBUTES ////
@@ -88,7 +87,7 @@ class GeneralQuadric
     CELER_FUNCTION real_type zeroth() const { return j_; }
 
     //! Get a view to the data for type-deleted storage
-    CELER_FUNCTION Storage data() const { return {&a_, 10}; }
+    CELER_FUNCTION StorageSpan data() const { return {&a_, 10}; }
 
     //// CALCULATION ////
 
@@ -165,9 +164,9 @@ CELER_FUNCTION GeneralQuadric::GeneralQuadric(Span<R, StorageSpan::extent> data)
  */
 CELER_FUNCTION SignedSense GeneralQuadric::calc_sense(Real3 const& pos) const
 {
-    const real_type x = pos[0];
-    const real_type y = pos[1];
-    const real_type z = pos[2];
+    real_type const x = pos[0];
+    real_type const y = pos[1];
+    real_type const z = pos[2];
 
     real_type result = (a_ * x + d_ * y + f_ * z + g_) * x
                        + (b_ * y + e_ * z + h_) * y + (c_ * z + i_) * z + j_;
@@ -219,8 +218,7 @@ CELER_FUNCTION Real3 GeneralQuadric::calc_normal(Real3 const& pos) const
     norm[1] = 2 * b_ * y + d_ * x + e_ * z + h_;
     norm[2] = 2 * c_ * z + e_ * y + f_ * x + i_;
 
-    normalize_direction(&norm);
-    return norm;
+    return make_unit_vector(norm);
 }
 
 //---------------------------------------------------------------------------//

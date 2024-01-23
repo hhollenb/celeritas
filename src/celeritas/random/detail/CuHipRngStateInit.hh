@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2020-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2020-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -22,7 +22,7 @@ namespace detail
 template<Ownership W, MemSpace M>
 struct CuHipRngInitData
 {
-    StateCollection<CuHipRngInitializer, W, M> seeds;
+    StateCollection<ull_int, W, M> seeds;
 
     //// METHODS ////
 
@@ -44,10 +44,12 @@ struct CuHipRngInitData
 
 //---------------------------------------------------------------------------//
 // Initialize the RNG state on host/device
-void rng_state_init(DeviceRef<CuHipRngStateData> const& rng,
+void rng_state_init(DeviceCRef<CuHipRngParamsData> const& params,
+                    DeviceRef<CuHipRngStateData> const& state,
                     DeviceCRef<CuHipRngInitData> const& seeds);
 
-void rng_state_init(HostRef<CuHipRngStateData> const& rng,
+void rng_state_init(HostCRef<CuHipRngParamsData> const& params,
+                    HostRef<CuHipRngStateData> const& state,
                     HostCRef<CuHipRngInitData> const& seeds);
 
 #if !CELER_USE_DEVICE
@@ -55,7 +57,8 @@ void rng_state_init(HostRef<CuHipRngStateData> const& rng,
 /*!
  * Initialize the RNG states on device from seeds randomly generated on host.
  */
-inline void rng_state_init(DeviceRef<CuHipRngStateData> const&,
+inline void rng_state_init(DeviceCRef<CuHipRngParamsData> const&,
+                           DeviceRef<CuHipRngStateData> const&,
                            DeviceCRef<CuHipRngInitData> const&)
 {
     CELER_ASSERT_UNREACHABLE();

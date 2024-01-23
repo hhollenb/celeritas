@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2023-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -10,6 +10,7 @@
 #include <array>
 #include <cstdlib>  // IWYU pragma: keep
 #include <iosfwd>
+#include <string>
 #include <string_view>
 
 // Undefine macros from sys/sysmacros.h
@@ -136,6 +137,12 @@ CELER_DEFINE_VERSION_CMP(>=)
 
 // Write to stream
 std::ostream& operator<<(std::ostream&, Version const&);
+
+// Save as string
+std::string to_string(Version const&);
+
+// Get the Celeritas version as an object
+Version celer_version();
 
 //---------------------------------------------------------------------------//
 }  // namespace celeritas

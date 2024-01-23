@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# Copyright 2021-2023 UT-Battelle, LLC, and other Celeritas developers.
+# Copyright 2021-2024 UT-Battelle, LLC, and other Celeritas developers.
 # See the top-level COPYRIGHT file for details.
 # SPDX-License-Identifier: (Apache-2.0 OR MIT)
 """
@@ -93,7 +93,6 @@ inp = {
     'num_track_slots': num_tracks,
     'max_steps': max_steps,
     'initializer_capacity': 100 * max([num_tracks, num_primaries]),
-    'max_events': 1000,
     'secondary_stack_factor': 3,
     'action_diagnostic': True,
     'step_diagnostic': True,
@@ -104,6 +103,7 @@ inp = {
     'default_stream': False,
     'brem_combined': True,
     'physics_options': physics_options,
+    'field': None,
 }
 
 with open(f'{run_name}.inp.json', 'w') as f:
@@ -130,8 +130,6 @@ if result.returncode:
 
 print("Received {} bytes of data".format(len(result.stdout)), file=stderr)
 out_text = result.stdout.decode()
-# Filter out spurious HepMC3 output
-out_text = out_text[out_text.find('\n{') + 1:]
 try:
     j = json.loads(out_text)
 except json.decoder.JSONDecodeError as e:

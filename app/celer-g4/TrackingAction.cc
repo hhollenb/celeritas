@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2022-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2022-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -15,6 +15,7 @@
 
 #include "corecel/Assert.hh"
 #include "corecel/Macros.hh"
+#include "accel/ExceptionConverter.hh"
 
 namespace celeritas
 {
@@ -49,7 +50,7 @@ void TrackingAction::PreUserTrackingAction(G4Track const* track)
                  == !SharedParams::CeleritasDisabled());
     CELER_EXPECT(static_cast<bool>(*params_) == static_cast<bool>(*transport_));
 
-    if (SharedParams::CeleritasDisabled())
+    if (SharedParams::CeleritasDisabled() && !SharedParams::KillOffloadTracks())
         return;
 
     auto const& allowed_particles = params_->OffloadParticles();
@@ -58,8 +59,12 @@ void TrackingAction::PreUserTrackingAction(G4Track const* track)
                   track->GetDefinition())
         != std::end(allowed_particles))
     {
-        // Celeritas is transporting this track
-        transport_->Push(*track);
+        if (!SharedParams::CeleritasDisabled())
+        {
+            // Celeritas is transporting this track
+            ExceptionConverter call_g4exception{"celer0003", params_.get()};
+            CELER_TRY_HANDLE(transport_->Push(*track), call_g4exception);
+        }
         const_cast<G4Track*>(track)->SetTrackStatus(fStopAndKill);
     }
 }
@@ -70,9 +75,9 @@ void TrackingAction::PreUserTrackingAction(G4Track const* track)
  */
 void TrackingAction::PostUserTrackingAction(G4Track const* track)
 {
-    if (diagnostics_->StepDiagnostic())
+    if (diagnostics_->step_diagnostic())
     {
-        diagnostics_->StepDiagnostic()->Update(track);
+        diagnostics_->step_diagnostic()->Update(track);
     }
 }
 

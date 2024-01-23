@@ -1,4 +1,4 @@
-.. Copyright 2022-2023 UT-Battelle, LLC, and other Celeritas developers.
+.. Copyright 2022-2024 UT-Battelle, LLC, and other Celeritas developers.
 .. See the doc/COPYRIGHT file for details.
 .. SPDX-License-Identifier: CC-BY-4.0
 
@@ -44,14 +44,14 @@ simulations of the CMS and ATLAS detectors.
    :maxdepth: 2
    :caption: Contents
 
-   introduction.rst
-   overview.rst
-   installation.rst
-   usage.rst
-   api.rst
-   examples.rst
-   references.rst
-   acknowledgments.rst
+   main/introduction.rst
+   main/overview.rst
+   main/installation.rst
+   main/usage.rst
+   main/api.rst
+   main/examples.rst
+   main/references.rst
+   main/acknowledgments.rst
 
 .. ***************************************************************************
 .. APPENDICES
@@ -65,7 +65,7 @@ simulations of the CMS and ATLAS detectors.
    :maxdepth: 2
    :caption: Appendices
 
-   appendices/release-history.rst
-   appendices/development.rst
-   appendices/administration.rst
-   appendices/license.rst
+   appendix/release-history.rst
+   appendix/development.rst
+   appendix/administration.rst
+   appendix/license.rst

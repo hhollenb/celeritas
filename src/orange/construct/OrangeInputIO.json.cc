@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2022-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2022-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -492,7 +492,7 @@ void from_json(nlohmann::json const& j, OrangeInput& value)
                    << "invalid ORANGE JSON input: unknown format '" << fmt
                    << "'");
     std::string version{"<unknown>"};
-    if (auto iter = j.find("version"); iter != j.end())
+    if (auto iter = j.find("_version"); iter != j.end())
     {
         version = std::to_string(iter->get<int>());
     }

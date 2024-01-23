@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2023-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -36,8 +36,7 @@ class ConeAligned
     //@{
     //! \name Type aliases
     using Intersections = Array<real_type, 2>;
-    using StorageSpan = Span<const real_type, 4>;
-    using Storage = StorageSpan;  // DEPRECATED
+    using StorageSpan = Span<real_type const, 4>;
     //@}
 
   private:
@@ -82,7 +81,7 @@ class ConeAligned
     CELER_FUNCTION real_type tangent_sq() const { return tsq_; }
 
     //! Get a view to the data for type-deleted storage
-    CELER_FUNCTION Storage data() const { return {&origin_[0], 4}; }
+    CELER_FUNCTION StorageSpan data() const { return {&origin_[0], 4}; }
 
     //// CALCULATION ////
 
@@ -226,8 +225,7 @@ CELER_FUNCTION Real3 ConeAligned<T>::calc_normal(Real3 const& pos) const
     }
     norm[to_int(T)] *= -tsq_;
 
-    normalize_direction(&norm);
-    return norm;
+    return make_unit_vector(norm);
 }
 
 //---------------------------------------------------------------------------//

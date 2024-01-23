@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2023-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -50,7 +50,7 @@ class LocalSurfaceVisitor
     // Apply the function to the surface specified by the given ID
     template<class F>
     inline CELER_FUNCTION decltype(auto)
-    operator()(F&& typed_visitor, LocalSurfaceId t);
+    operator()(F && typed_visitor, LocalSurfaceId t);
 
   private:
     //// TYPES ////
@@ -102,6 +102,7 @@ LocalSurfaceVisitor::LocalSurfaceVisitor(ParamsRef const& params,
 {
 }
 
+#if !defined(__DOXYGEN__) || __DOXYGEN__ > 0x010908
 //---------------------------------------------------------------------------//
 /*!
  * Apply the function to the surface specified by the given ID.
@@ -121,6 +122,7 @@ LocalSurfaceVisitor::operator()(F&& func, LocalSurfaceId id)
         },
         this->get_item(params_.surface_types, surfaces_.types, id));
 }
+#endif
 
 //---------------------------------------------------------------------------//
 // PRIVATE HELPER FUNCTIONS
@@ -131,15 +133,17 @@ LocalSurfaceVisitor::operator()(F&& func, LocalSurfaceId id)
 template<class T>
 CELER_FUNCTION T LocalSurfaceVisitor::make_surface(LocalSurfaceId id) const
 {
-    using ItemIdT = typename decltype(params_.reals)::ItemIdT;
+    using Reals = decltype(params_.reals);
+    using ItemIdT = typename Reals::ItemIdT;
+    using ItemRangeT = typename Reals::ItemRangeT;
     ItemIdT offset
         = this->get_item(params_.real_ids, surfaces_.data_offsets, id);
     constexpr size_type size{T::StorageSpan::extent};
     CELER_ASSERT(offset + size <= params_.reals.size());
-    // Construct a range used to index into collection using the appropriate
-    // operator[] overload then convert to a statically sized span using the
-    // first() member template function as required by surface ctor
-    return T{params_.reals[{offset, offset + size}].template first<size>()};
+    auto storage_span = params_.reals[ItemRangeT{offset, offset + size}];
+    // Convert to a statically sized span using the first() member template
+    // function, then construct a surface, for LdgSpan to work correctly.
+    return T{storage_span.template first<size>()};
 }
 
 //---------------------------------------------------------------------------//

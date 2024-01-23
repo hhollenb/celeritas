@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2021-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2021-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -379,7 +379,7 @@ class CollectionTest : public Test
         {
             MockMaterial m;
             m.number_density = 2.0;
-            const MockElement elements[] = {
+            MockElement const elements[] = {
                 {1, 1.1},
                 {3, 5.0},
                 {6, 12.0},
@@ -457,7 +457,7 @@ TEST_F(CollectionTest, host)
     host_state_ref.matid[TrackSlotId{0}] = MockMaterialId{1};
 
     // Create view
-    MockTrackView mock(mock_params.host(), host_state_ref, TrackSlotId{0});
+    MockTrackView mock(mock_params.host_ref(), host_state_ref, TrackSlotId{0});
     EXPECT_EQ(1, mock.matid().unchecked_get());
 }
 
@@ -470,7 +470,7 @@ TEST_F(CollectionTest, TEST_IF_CELER_DEVICE(device))
     DeviceVector<double> device_result(device_states.size());
 
     CTestInput kernel_input;
-    kernel_input.params = this->mock_params.device();
+    kernel_input.params = this->mock_params.device_ref();
     kernel_input.states = device_states;
     kernel_input.result = device_result.device_ref();
 

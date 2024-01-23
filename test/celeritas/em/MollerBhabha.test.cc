@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2021-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2021-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -126,8 +126,7 @@ TEST_F(MollerBhabhaInteractorTest, basic)
 
     for (SampleInit const& init : samples)
     {
-        Real3 dir = init.dir;
-        normalize_direction(&dir);
+        Real3 dir = make_unit_vector(init.dir);
         this->set_inc_direction(dir);
 
         for (auto p : {pdg::electron(), pdg::positron()})
@@ -228,8 +227,7 @@ TEST_F(MollerBhabhaInteractorTest, cutoff_1MeV)
 
     for (SampleInit const& init : samples)
     {
-        Real3 dir = init.dir;
-        normalize_direction(&dir);
+        Real3 dir = make_unit_vector(init.dir);
         this->set_inc_direction(dir);
 
         for (auto p : {pdg::electron(), pdg::positron()})

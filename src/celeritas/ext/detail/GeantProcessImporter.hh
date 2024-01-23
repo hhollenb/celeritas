@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2020-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2020-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -31,6 +31,7 @@ namespace celeritas
 namespace detail
 {
 //---------------------------------------------------------------------------//
+// DEPRECATED: remove in v0.5
 enum class TableSelection
 {
     minimal,  //!< Store only lambda, dedx, and range
@@ -107,9 +108,6 @@ class GeantProcessImporter
     // Store material and element information for the element selector tables
     std::vector<ImportMaterial> const& materials_;
     std::vector<ImportElement> const& elements_;
-
-    // Whether to write tables that aren't used by physics
-    TableSelection which_tables_;
 };
 
 //---------------------------------------------------------------------------//

@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2021-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2021-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -25,8 +25,7 @@ class PlaneAligned
     //@{
     //! \name Type aliases
     using Intersections = Array<real_type, 1>;
-    using StorageSpan = Span<const real_type, 1>;
-    using Storage = StorageSpan;  // DEPRECATED
+    using StorageSpan = Span<real_type const, 1>;
     //@}
 
     //// CLASS ATTRIBUTES ////
@@ -53,7 +52,7 @@ class PlaneAligned
     CELER_FUNCTION real_type position() const { return position_; }
 
     //! Get a view to the data for type-deleted storage
-    CELER_FUNCTION Storage data() const { return {&position_, 1}; }
+    CELER_FUNCTION StorageSpan data() const { return {&position_, 1}; }
 
     // Construct outward normal vector
     inline CELER_FUNCTION Real3 calc_normal() const;
@@ -114,7 +113,8 @@ CELER_FUNCTION PlaneAligned<T>::PlaneAligned(real_type position)
  */
 template<Axis T>
 template<class R>
-CELER_FUNCTION PlaneAligned<T>::PlaneAligned(Span<R, StorageSpan::extent> data) : position_(data[0])
+CELER_FUNCTION PlaneAligned<T>::PlaneAligned(Span<R, StorageSpan::extent> data)
+    : position_(data[0])
 {
 }
 

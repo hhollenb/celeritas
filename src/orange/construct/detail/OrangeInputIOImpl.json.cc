@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2023-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -46,11 +46,11 @@ struct SurfaceEmplacer
         return visit_surface_type(
             [this, data](auto st_constant) {
                 using Surface = typename decltype(st_constant)::type;
-                using Storage = typename Surface::Storage;
+                using StorageSpan = typename Surface::StorageSpan;
 
                 // Construct the variant on the back of the vector
                 surfaces->emplace_back(std::in_place_type<Surface>,
-                                       Storage{data.data(), data.size()});
+                                       StorageSpan{data.data(), data.size()});
             },
             st);
     }

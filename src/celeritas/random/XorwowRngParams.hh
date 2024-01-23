@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2022-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2022-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -8,6 +8,7 @@
 #pragma once
 
 #include "corecel/Types.hh"
+#include "corecel/cont/Array.hh"
 #include "corecel/data/CollectionMirror.hh"
 #include "corecel/data/ParamsDataInterface.hh"
 
@@ -29,14 +30,26 @@ class XorwowRngParams final : public ParamsDataInterface<XorwowRngParamsData>
     // explicit XorwowRngParams(const std::string& hexstring);
 
     //! Access material properties on the host
-    HostRef const& host_ref() const final { return data_.host(); }
+    HostRef const& host_ref() const final { return data_.host_ref(); }
 
     //! Access material properties on the device
-    DeviceRef const& device_ref() const final { return data_.device(); }
+    DeviceRef const& device_ref() const final { return data_.device_ref(); }
 
   private:
+    //// DATA ////
+
     // Host/device storage and reference
     CollectionMirror<XorwowRngParamsData> data_;
+
+    //// TYPES ////
+
+    using JumpPoly = Array<unsigned int, 5>;
+    using ArrayJumpPoly = Array<JumpPoly, 32>;
+
+    //// HELPER FUNCTIONS ////
+
+    ArrayJumpPoly const& get_jump_poly();
+    ArrayJumpPoly const& get_jump_subsequence_poly();
 };
 
 //---------------------------------------------------------------------------//

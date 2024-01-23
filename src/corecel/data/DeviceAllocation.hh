@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2020-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2020-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -34,8 +34,8 @@ class DeviceAllocation
     //!@{
     //! \name Type aliases
     using size_type = std::size_t;
-    using SpanBytes = Span<Byte>;
-    using SpanConstBytes = Span<Byte const>;
+    using SpanBytes = Span<std::byte>;
+    using SpanConstBytes = Span<std::byte const>;
     //!@}
 
   public:
@@ -80,9 +80,9 @@ class DeviceAllocation
     struct DeviceFreeDeleter
     {
         StreamId stream_;
-        void operator()(Byte*) const noexcept(CELER_USE_DEVICE);
+        void operator()(std::byte*) const noexcept(CELER_USE_DEVICE);
     };
-    using DeviceUniquePtr = std::unique_ptr<Byte[], DeviceFreeDeleter>;
+    using DeviceUniquePtr = std::unique_ptr<std::byte[], DeviceFreeDeleter>;
 
     //// DATA ////
 

@@ -1,5 +1,5 @@
 //---------------------------------*-CUDA-*----------------------------------//
-// Copyright 2020-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2020-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -26,16 +26,20 @@ namespace
 /*!
  * Initialize the RNG states on device from seeds randomly generated on host.
  */
-__global__ void rng_state_init_kernel(DeviceRef<CuHipRngStateData> const state,
-                                      DeviceCRef<CuHipRngInitData> const init)
+__global__ void
+rng_state_init_kernel(DeviceCRef<CuHipRngParamsData> const params,
+                      DeviceRef<CuHipRngStateData> const state,
+                      DeviceCRef<CuHipRngInitData> const seeds)
 {
     auto tid = TrackSlotId{
         celeritas::KernelParamCalculator::thread_id().unchecked_get()};
     if (tid.get() < state.size())
     {
         TrackSlotId tsid{tid.unchecked_get()};
-        CuHipRngEngine rng(state, tsid);
-        rng = init.seeds[tsid];
+        CuHipRngInitializer init;
+        init.seed = seeds.seeds[tsid];
+        CuHipRngEngine rng(params, state, tsid);
+        rng = init;
     }
 }
 
@@ -48,11 +52,12 @@ __global__ void rng_state_init_kernel(DeviceRef<CuHipRngStateData> const state,
 /*!
  * Initialize the RNG states on device from seeds randomly generated on host.
  */
-void rng_state_init(DeviceRef<CuHipRngStateData> const& rng,
+void rng_state_init(DeviceCRef<CuHipRngParamsData> const& params,
+                    DeviceRef<CuHipRngStateData> const& state,
                     DeviceCRef<CuHipRngInitData> const& seeds)
 {
-    CELER_EXPECT(rng.size() == seeds.size());
-    CELER_LAUNCH_KERNEL(rng_state_init, seeds.size(), 0, rng, seeds);
+    CELER_EXPECT(state.size() == seeds.size());
+    CELER_LAUNCH_KERNEL(rng_state_init, seeds.size(), 0, params, state, seeds);
 }
 
 //---------------------------------------------------------------------------//

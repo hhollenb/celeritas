@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2020-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2020-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -35,36 +35,31 @@ enum class ImportTableType
     dedx,  //!< Energy loss summed over processes
     range,  //!< Integrated inverse energy loss
     msc_xs,  //!< Scaled transport cross section
-
-    //// DEPRECATED (remove in v0.4): Unused by celeritas ////
-    dedx_process,  //!< Energy loss table for a process
-    dedx_unrestricted,
-    csda_range,  //!< Continuous slowing down approximation
-
-    //// DEPRECATED (remove in v0.4): Removed in Geant4@11 ////
-    dedx_subsec,
-    ionization_subsec,
-    secondary_range,
-    inverse_range,  //!< Inverse mapping of range: (range -> energy)
-    sublambda,  //!< For subcutoff regions
-
     size_
 };
 
 //---------------------------------------------------------------------------//
 /*!
  * Units of a physics table.
+ *
+ * These depend on the unit selection in the main import data
  */
 enum class ImportUnits
 {
     none,  //!< Unitless
     mev,  //!< Energy [MeV]
-    mev_per_cm,  //!< Energy loss [MeV/cm]
-    cm,  //!< Range [cm]
-    cm_inv,  //!< Macroscopic xs [1/cm]
-    cm_mev_inv,  //!< Macroscopic xs divided by energy [1/cm-MeV]
-    mev_2_per_cm,  //!< Macroscopic xs with energy^2 factored in [MeV^2/cm]
-    cm_2,  //!< Microscopic cross section [cm^2]
+    mev_per_len,  //!< Energy loss [MeV/len]
+    mev_per_cm = mev_per_len,  //!< Deprecated
+    len,  //!< Range [len]
+    cm = len,  //!< Deprecated
+    len_inv,  //!< Macroscopic xs [1/len]
+    cm_inv = len_inv,  //!< Deprecated
+    len_mev_inv,  //!< Scaled [1/E] macroscopic xs [1/len-MeV]
+    cm_mev_inv = len_mev_inv,  //!< Deprecated
+    mev_sq_per_len,  //!< Scaled [E^2] macroscopic xs  [MeV^2/len]
+    mev_2_per_cm = mev_sq_per_len,  //!< Deprecated
+    len_sq,  //!< Microscopic cross section [len^2]
+    cm_2 = len_sq,  //!< Deprecated
     size_
 };
 

@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2020-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2020-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -66,6 +66,7 @@ template<Ownership W, MemSpace M>
 struct ParamsData
 {
     ParticleParamsData<W, M> particle;
+    RngParamsData<W, M> rng;
     TableData<W, M> tables;
     KleinNishinaData kn_interactor;
     DetectorParamsData detector;
@@ -81,6 +82,7 @@ struct ParamsData
     {
         CELER_EXPECT(other);
         particle = other.particle;
+        rng = other.rng;
         tables = other.tables;
         kn_interactor = other.kn_interactor;
         return *this;
@@ -152,7 +154,7 @@ void finalize(ParamsData<Ownership::const_reference, M> const& params,
     CELER_EXPECT(edep.size() == params.detector.tally_grid.size);
 
     copy_to_host(state.detector.tally_deposition, edep);
-    const real_type norm = 1 / real_type(state.size());
+    real_type const norm = 1 / real_type(state.size());
     for (real_type& v : edep)
     {
         v *= norm;

@@ -1,5 +1,5 @@
 //----------------------------------*-C++-*----------------------------------//
-// Copyright 2021-2023 UT-Battelle, LLC, and other Celeritas developers.
+// Copyright 2021-2024 UT-Battelle, LLC, and other Celeritas developers.
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
@@ -7,6 +7,7 @@
 //---------------------------------------------------------------------------//
 #pragma once
 
+#include "corecel/data/CollectionMirror.hh"
 #include "corecel/data/ParamsDataInterface.hh"
 
 #include "CuHipRngData.hh"
@@ -24,28 +25,18 @@ class CuHipRngParams final : public ParamsDataInterface<CuHipRngParamsData>
 {
   public:
     // Construct with seed
-    explicit inline CuHipRngParams(unsigned int seed);
+    explicit CuHipRngParams(unsigned int seed);
 
     //! Access RNG properties for constructing RNG state
-    HostRef const& host_ref() const final { return host_ref_; }
+    HostRef const& host_ref() const final { return data_.host_ref(); }
 
     //! Access data on device
-    DeviceRef const& device_ref() const final { return device_ref_; }
+    DeviceRef const& device_ref() const final { return data_.device_ref(); }
 
   private:
-    HostRef host_ref_;
-    DeviceRef device_ref_;
+    // Host/device storage and reference
+    CollectionMirror<CuHipRngParamsData> data_;
 };
 
 //---------------------------------------------------------------------------//
-// INLINE DEFINITIONS
-//---------------------------------------------------------------------------//
-/*!
- * Construct with seed.
- */
-CuHipRngParams::CuHipRngParams(unsigned int seed)
-{
-    host_ref_.seed = seed;
-}
-
 }  // namespace celeritas
