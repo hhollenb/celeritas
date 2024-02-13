@@ -125,7 +125,7 @@ CELER_FUNCTION Interaction WentzelInteractor::operator()(Engine& rng)
     real_type cos_theta = sample_angle(rng);
     UniformRealDistribution<real_type> sample_phi(0, 2 * constants::pi);
     result.direction
-        = rotate(inc_direction_, from_spherical(cos_theta, sample_phi(rng)));
+        = rotate(from_spherical(cos_theta, sample_phi(rng)), inc_direction_);
 
     // Recoil energy is kinetic energy transfered to the atom
     real_type inc_energy = value_as<Energy>(particle_.energy());

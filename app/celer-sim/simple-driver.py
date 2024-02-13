@@ -81,7 +81,7 @@ max_steps = 512 if physics_options['msc'] else 128
 if not use_device:
     # Way more steps are needed since we're not tracking in parallel, but
     # shorten to an unreasonably small number to reduce test time.
-    max_steps = 200000
+    max_steps = 100000
 
 inp = {
     'use_device': use_device,
@@ -94,8 +94,8 @@ inp = {
     'max_steps': max_steps,
     'initializer_capacity': 100 * max([num_tracks, num_primaries]),
     'secondary_stack_factor': 3,
-    'action_diagnostic': True,
-    'step_diagnostic': True,
+    'action_diagnostic': False,
+    'step_diagnostic': False,
     'step_diagnostic_bins': 200,
     'simple_calo': simple_calo,
     'sync': True,
