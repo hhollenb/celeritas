@@ -46,16 +46,21 @@ list(APPEND SOURCES
   grid/ValueGridInserter.cc
   grid/VectorUtils.cc
   io/AtomicRelaxationReader.cc
+  io/ImportData.cc
+  io/ImportMaterial.cc
   io/ImportModel.cc
   io/ImportPhysicsTable.cc
   io/ImportPhysicsVector.cc
   io/ImportProcess.cc
+  io/ImportUnits.cc
   io/LivermorePEReader.cc
   io/SeltzerBergerReader.cc
+  io/detail/ImportDataConverter.cc
   mat/MaterialParams.cc
   mat/MaterialParamsOutput.cc
   mat/detail/Utils.cc
   optical/CerenkovParams.cc
+  optical/ScintillationParams.cc
   phys/CutoffParams.cc
   phys/ImportedModelAdapter.cc
   phys/ImportedProcessAdapter.cc
@@ -192,6 +197,7 @@ if(CELERITAS_USE_ROOT)
     "celeritas/io/ImportPhysicsTable.hh"
     "celeritas/io/ImportPhysicsVector.hh"
     "celeritas/io/ImportProcess.hh"
+    "celeritas/io/ImportUnits.hh"
     "celeritas/io/ImportVolume.hh"
     "celeritas/io/EventData.hh"
     NOINSTALL
@@ -251,7 +257,7 @@ if(CELERITAS_USE_VecGeom)
     # one of the executable.
     list(APPEND PUBLIC_DEPS VecGeom::vecgeom)
   elseif(VecGeom_CUDA_FOUND)
-    # VecGeom is build with CUDA but Celeritas is not
+    # VecGeom is built with CUDA but Celeritas is not
     list(APPEND PRIVATE_DEPS VecGeom::vecgeomcuda)
   endif()
 endif()

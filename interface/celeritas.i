@@ -69,6 +69,11 @@
 #include "celeritas/Constants.hh"
 %}
 
+namespace celeritas
+{
+enum class UnitSystem;
+}
+
 %include "celeritas/Units.hh"
 %include "celeritas/Constants.hh"
 
@@ -97,6 +102,7 @@ namespace celeritas
 %celer_rename_to_cstring(vector_type, ImportPhysicsVectorType);
 %celer_rename_to_cstring(process_type, ImportProcessType);
 %celer_rename_to_cstring(process_class, ImportProcessClass);
+%celer_rename_to_cstring(material_state, ImportMaterialState);
 %celer_rename_to_cstring(model, ImportModelClass);
 %rename(process_class_to_geant_name) to_geant_name(ImportProcessClass);
 %rename(model_to_geant_name) to_geant_name(ImportModelClass);
@@ -109,6 +115,8 @@ namespace celeritas
 
 %include "celeritas/io/ImportPhysicsVector.hh"
 %template(VecImportPhysicsVector) std::vector<celeritas::ImportPhysicsVector>;
+
+%include "celeritas/io/ImportUnits.hh"
 
 %include "celeritas/io/ImportPhysicsTable.hh"
 %template(VecImportPhysicsTable) std::vector<celeritas::ImportPhysicsTable>;

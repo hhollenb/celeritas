@@ -136,6 +136,15 @@ celeritas_setup_option(CELERITAS_REAL_TYPE float)
 celeritas_define_options(CELERITAS_REAL_TYPE
   "Global runtime precision for real numbers")
 
+if((CELERITAS_CORE_GEO STREQUAL "ORANGE")
+    AND (NOT CELERITAS_UNITS STREQUAL "CGS"))
+  celeritas_error_incompatible_option(
+    "ORANGE currently requires CGS units"
+    CELERITAS_UNITS
+    CGS
+  )
+endif()
+
 #----------------------------------------------------------------------------#
 # CMAKE VERSION CHECKS
 #----------------------------------------------------------------------------#
@@ -447,8 +456,18 @@ elseif(CELERITAS_USE_HIP)
     set(CELERITAS_HAVE_ROCTX ON)
     target_link_libraries(celeritas_device_toolkit INTERFACE ${ROCTX_LIBRARY})
   endif()
-  # TODO: downstream libs don't link against correct HIP dependencies when using
-  # static libraries
+  if(NOT BUILD_SHARED_LIBS)
+    # Downstream libs don't link against correct HIP dependencies when using
+    # static libraries, and even though the code below propagates the library
+    # names (-lamdhip64) CMake fails to include the link directories
+    # (/opt/rocm/lib)
+    target_link_libraries(celeritas_device_toolkit
+      INTERFACE "$<INSTALL_INTERFACE:${CMAKE_HIP_IMPLICIT_LINK_LIBRARIES}>"
+    )
+    target_link_directories(celeritas_device_toolkit
+      INTERFACE "$<INSTALL_INTERFACE:${CMAKE_HIP_IMPLICIT_LINK_DIRECTORIES}>"
+    )
+  endif()
 endif()
 
 install(TARGETS celeritas_device_toolkit
@@ -610,6 +629,12 @@ message(WARNING \"The Celeritas version was not detected during configuration.
   provenance data in output results.\")
 ")
 endif()
-
+if(CELERITAS_USE_HIP AND NOT BUILD_SHARED_LIBS)
+  # See celeritas_device_toolkit above
+  install(CODE "
+message(WARNING \"CMake may not be able to correctly propagate implicit HIP
+  libraries: downstream executables may fail to link.\")
+")
+endif()
 
 #----------------------------------------------------------------------------#

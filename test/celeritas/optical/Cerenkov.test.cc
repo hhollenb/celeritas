@@ -13,6 +13,7 @@
 #include "corecel/math/Algorithms.hh"
 #include "corecel/math/ArrayOperators.hh"
 #include "corecel/math/ArrayUtils.hh"
+#include "corecel/math/Quantity.hh"
 #include "celeritas/Constants.hh"
 #include "celeritas/Units.hh"
 #include "celeritas/grid/GenericGridData.hh"
@@ -29,6 +30,16 @@ namespace celeritas
 {
 namespace test
 {
+struct InvCentimeter
+{
+    static CELER_CONSTEXPR_FUNCTION real_type value()
+    {
+        return 1 / units::centimeter;
+    }
+    static char const* label() { return "1/cm"; }
+};
+
+using InvCmDnDx = Quantity<InvCentimeter>;
 //---------------------------------------------------------------------------//
 /*!
  * Tabulated refractive index in water as a function of photon wavelength [μm].
@@ -173,6 +184,7 @@ TEST_F(CerenkovTest, dndx)
 {
     EXPECT_SOFT_NEAR(369.81e6,
                      constants::alpha_fine_structure * units::Mev::value()
+                         * units::centimeter
                          / (constants::hbar_planck * constants::c_light),
                      1e-6);
 
@@ -182,7 +194,9 @@ TEST_F(CerenkovTest, dndx)
     for (real_type beta :
          {0.5, 0.6813, 0.69, 0.71, 0.73, 0.752, 0.756, 0.8, 0.9, 0.999})
     {
-        dndx.push_back(calc_dndx(units::LightSpeed(beta)));
+        dndx.push_back(
+            native_value_to<InvCmDnDx>(calc_dndx(units::LightSpeed(beta)))
+                .value());
     }
     if (CELERITAS_REAL_TYPE == CELERITAS_REAL_TYPE_DOUBLE)
     {
@@ -224,7 +238,7 @@ TEST_F(CerenkovTest, TEST_IF_CELERITAS_DOUBLE(generator))
     real_type emax = convert_to_energy(get_wavelength().back() * micrometer);
     real_type edel = (emax - emin) / num_bins;
 
-    auto sample = [&](CerenkovDistributionData& dist, size_type num_samples) {
+    auto sample = [&](OpticalDistributionData& dist, size_type num_samples) {
         // Reset tallies
         rng.reset_count();
         avg_costheta = avg_energy = avg_displacement = total_num_photons = 0;
@@ -297,13 +311,13 @@ TEST_F(CerenkovTest, TEST_IF_CELERITAS_DOUBLE(generator))
         }
         avg_costheta /= total_num_photons;
         avg_energy /= total_num_photons;
-        avg_displacement /= total_num_photons;
+        avg_displacement /= (units::centimeter * total_num_photons);
         avg_engine_samples = real_type(rng.count()) / num_samples;
     };
 
     size_type num_samples = 64;
 
-    CerenkovDistributionData dist;
+    OpticalDistributionData dist;
     dist.time = 0;
     dist.charge = charge;
     dist.material = material;
