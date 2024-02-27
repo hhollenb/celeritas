@@ -10,6 +10,7 @@ import re
 import subprocess
 from os import environ, path
 from sys import exit, argv, stderr
+import random
 
 try:
     (geometry_filename, event_filename, rootout_filename) = argv[1:]
@@ -83,13 +84,15 @@ if not use_device:
     # shorten to an unreasonably small number to reduce test time.
     max_steps = 100000
 
+random.seed()
+
 inp = {
     'use_device': use_device,
     'geometry_file': geometry_filename,
     'physics_file': physics_filename,
     'event_file': event_filename,
     'mctruth_file': rootout_filename,
-    'seed': 12345,
+    'seed': random.randint(1,10000000),
     'num_track_slots': num_tracks,
     'max_steps': max_steps,
     'initializer_capacity': 100 * max([num_tracks, num_primaries]),
@@ -128,21 +131,21 @@ if result.returncode:
 
     exit(result.returncode)
 
-print("Received {} bytes of data".format(len(result.stdout)), file=stderr)
-out_text = result.stdout.decode()
-try:
-    j = json.loads(out_text)
-except json.decoder.JSONDecodeError as e:
-    print("error: expected a JSON object but got the following stdout:")
-    print(out_text)
-    print("fatal:", str(e))
-    exit(1)
-
-outfilename = f'{run_name}.out.json'
-with open(outfilename, 'w') as f:
-    json.dump(j, f, indent=1)
-print("Results written to", outfilename, file=stderr)
-
-time = j['result']['runner']['time'].copy()
-time.pop('steps')
-print(json.dumps(time, indent=1))
+# print("Received {} bytes of data".format(len(result.stdout)), file=stderr)
+# out_text = result.stdout.decode()
+# try:
+#     j = json.loads(out_text)
+# except json.decoder.JSONDecodeError as e:
+#     print("error: expected a JSON object but got the following stdout:")
+#     print(out_text)
+#     print("fatal:", str(e))
+#     exit(1)
+#
+# outfilename = f'{run_name}.out.json'
+# with open(outfilename, 'w') as f:
+#     json.dump(j, f, indent=1)
+# print("Results written to", outfilename, file=stderr)
+# 
+# time = j['result']['runner']['time'].copy()
+# time.pop('steps')
+# print(json.dumps(time, indent=1))

@@ -484,7 +484,12 @@ void Runner::build_step_collectors(RunnerInput const& inp)
             root_manager_,
             core_params_->particle(),
             StepSelection::all(),
-            make_write_filter(inp.mctruth_filter)));
+            [](RootStepWriter::TStepData const& step) -> bool {
+                return step.track_step_count < 100
+                       || step.points[StepPoint::post].time > 0.1e-9;
+            }
+            // make_write_filter(inp.mctruth_filter)
+            ));
     }
 
     if (!inp.simple_calo.empty())
