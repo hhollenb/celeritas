@@ -11,8 +11,8 @@
 
 #include "corecel/cont/Range.hh"
 #include "corecel/data/CollectionStateStore.hh"
+#include "geocel/UnitUtils.hh"
 #include "celeritas/MockTestBase.hh"
-#include "celeritas/UnitUtils.hh"
 #include "celeritas/em/process/EPlusAnnihilationProcess.hh"
 #include "celeritas/grid/EnergyLossCalculator.hh"
 #include "celeritas/grid/RangeCalculator.hh"
@@ -136,10 +136,6 @@ TEST_F(PhysicsParamsTest, output)
     PhysicsParamsOutput out(this->physics());
     EXPECT_EQ("physics", out.label());
 
-    if (CELERITAS_REAL_TYPE != CELERITAS_REAL_TYPE_DOUBLE)
-    {
-        GTEST_SKIP() << "Test results are based on double-precision data";
-    }
     if (CELERITAS_UNITS != CELERITAS_UNITS_CGS)
     {
         GTEST_SKIP() << "Test results are based on CGS units";

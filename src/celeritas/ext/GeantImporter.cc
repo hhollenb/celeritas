@@ -23,6 +23,7 @@
 #include <G4ElementVector.hh>
 #include <G4EmParameters.hh>
 #include <G4GammaGeneralProcess.hh>
+#include <G4LogicalVolumeStore.hh>
 #include <G4Material.hh>
 #include <G4MaterialCutsCouple.hh>
 #include <G4Navigator.hh>
@@ -59,17 +60,18 @@
 #include "corecel/sys/ScopedMem.hh"
 #include "corecel/sys/ScopedProfiling.hh"
 #include "corecel/sys/TypeDemangler.hh"
-#include "celeritas/ext/GeantSetup.hh"
+#include "geocel/GeantGeoUtils.hh"
+#include "geocel/ScopedGeantExceptionHandler.hh"
+#include "geocel/g4/VisitGeantVolumes.hh"
 #include "celeritas/io/AtomicRelaxationReader.hh"
 #include "celeritas/io/ImportData.hh"
 #include "celeritas/io/LivermorePEReader.hh"
 #include "celeritas/io/SeltzerBergerReader.hh"
 #include "celeritas/phys/PDGNumber.hh"
 
-#include "ScopedGeantExceptionHandler.hh"
+#include "GeantSetup.hh"
 #include "detail/AllElementReader.hh"
 #include "detail/GeantProcessImporter.hh"
-#include "detail/GeantVolumeVisitor.hh"
 
 inline constexpr double mev_scale = 1 / CLHEP::MeV;
 
@@ -143,6 +145,47 @@ struct ProcessFilter
                 return (which & DataSelection::hadron);
             default:
                 return false;
+        }
+    }
+};
+
+//---------------------------------------------------------------------------//
+//! Retrieve and store optical material properties, if present.
+struct MatPropGetter
+{
+    G4MaterialPropertiesTable const& mpt;
+
+    void scalar(double* dst, std::string name, ImportUnits q)
+    {
+        if (!mpt.ConstPropertyExists(name))
+        {
+            return;
+        }
+        *dst = mpt.GetConstProperty(name) * native_value_from_clhep(q);
+    }
+
+    void scalar(double* dst, std::string name, int comp, ImportUnits q)
+    {
+        this->scalar(dst, name + std::to_string(comp), q);
+    }
+
+    void vector(ImportPhysicsVector* dst, std::string name, ImportUnits q)
+    {
+        auto const* g4vector = mpt.GetProperty(name);
+        if (!g4vector)
+        {
+            return;
+        }
+        CELER_ASSERT(g4vector->GetType()
+                     == G4PhysicsVectorType::T_G4PhysicsFreeVector);
+        double const y_scale = native_value_from_clhep(q);
+        dst->vector_type = ImportPhysicsVectorType::free;
+        dst->x.resize(g4vector->GetVectorLength());
+        dst->y.resize(dst->x.size());
+        for (auto i : range(dst->x.size()))
+        {
+            dst->x[i] = g4vector->Energy(i);
+            dst->y[i] = (*g4vector)[i] * y_scale;
         }
     }
 };
@@ -323,6 +366,102 @@ std::vector<ImportElement> import_elements()
     CELER_ENSURE(!elements.empty());
     CELER_LOG(debug) << "Loaded " << elements.size() << " elements";
     return elements;
+}
+
+//---------------------------------------------------------------------------//
+/*!
+ * Store material-dependent optical properties.
+ *
+ * This returns a map of material index to imported optical property data.
+ */
+ImportData::ImportOpticalMap import_optical()
+{
+    auto const& pct = *G4ProductionCutsTable::GetProductionCutsTable();
+    auto num_materials = pct.GetTableSize();
+    CELER_ASSERT(num_materials > 0);
+
+    ImportData::ImportOpticalMap result;
+    for (auto mat_idx : range(num_materials))
+    {
+        auto const* mcc = pct.GetMaterialCutsCouple(mat_idx);
+        CELER_ASSERT(mcc);
+        CELER_ASSERT(static_cast<std::size_t>(mcc->GetIndex()) == mat_idx);
+
+        auto const* material = mcc->GetMaterial();
+        CELER_ASSERT(material);
+
+        // Add optical material properties, if any are present
+        auto const* mpt = material->GetMaterialPropertiesTable();
+        if (!mpt)
+        {
+            continue;
+        }
+        ImportOpticalMaterial optical;
+        MatPropGetter get_property{*mpt};
+
+        // Save common properties
+        get_property.vector(&optical.properties.refractive_index,
+                            "RINDEX",
+                            ImportUnits::unitless);
+
+        // Save scintillation properties
+        get_property.scalar(&optical.scintillation.resolution_scale,
+                            "RESOLUTIONSCALE",
+                            ImportUnits::unitless);
+        get_property.scalar(&optical.scintillation.yield,
+                            "SCINTILLATIONYIELD",
+                            ImportUnits::unitless);
+        for (int comp_idx : range(1, 4))
+        {
+            ImportScintComponent comp;
+            get_property.scalar(&comp.yield,
+                                "SCINTILLATIONYIELD",
+                                comp_idx,
+                                ImportUnits::unitless);
+            get_property.scalar(&comp.lambda_mean,
+                                "SCINTILLATIONLAMBDAMEAN",
+                                comp_idx,
+                                ImportUnits::len);
+            get_property.scalar(&comp.lambda_sigma,
+                                "SCINTILLATIONLAMBDASIGMA",
+                                comp_idx,
+                                ImportUnits::len);
+            get_property.scalar(&comp.rise_time,
+                                "SCINTILLATIONRISETIME",
+                                comp_idx,
+                                ImportUnits::time);
+            get_property.scalar(&comp.fall_time,
+                                "SCINTILLATIONTIMECONSTANT",
+                                comp_idx,
+                                ImportUnits::time);
+            if (comp)
+            {
+                optical.scintillation.components.push_back(comp);
+            }
+        }
+
+        // Save Rayleigh properties
+        get_property.vector(
+            &optical.rayleigh.mfp, "RAYLEIGH", ImportUnits::len);
+        get_property.scalar(&optical.rayleigh.scale_factor,
+                            "RS_SCALE_FACTOR",
+                            ImportUnits::unitless);
+        get_property.scalar(&optical.rayleigh.compressibility,
+                            "ISOTHERMAL_COMPRESSIBILITY",
+                            ImportUnits::len_time_sq_per_mass);
+
+        // Save absorption properties
+        get_property.vector(&optical.absorption.absorption_length,
+                            "ABSLENGTH",
+                            ImportUnits::len);
+
+        if (optical)
+        {
+            result[mat_idx] = optical;
+        }
+    }
+    CELER_LOG(debug) << "Loaded " << result.size() << " optical materials";
+    return result;
 }
 
 //---------------------------------------------------------------------------//
@@ -747,6 +886,7 @@ ImportData GeantImporter::operator()(DataSelection const& selected)
             imported.isotopes = import_isotopes();
             imported.elements = import_elements();
             imported.materials = import_materials(selected.particles);
+            imported.optical = import_optical();
         }
         if (selected.processes != DataSelection::none)
         {
@@ -814,15 +954,49 @@ ImportData GeantImporter::operator()(DataSelection const& selected)
 std::vector<ImportVolume>
 GeantImporter::import_volumes(bool unique_volumes) const
 {
-    detail::GeantVolumeVisitor visitor(unique_volumes);
-    // Recursive loop over all logical volumes to populate map
-    visitor.visit(*world_->GetLogicalVolume());
+    // Note: if the LV has been purged (i.e. by trying to run multiple
+    // geometries in the same execution), the instance ID's won't correspond to
+    // the location in the vector.
+    G4LogicalVolumeStore* lv_store = G4LogicalVolumeStore::GetInstance();
+    CELER_ASSERT(lv_store);
+    std::vector<ImportVolume> result;
+    result.reserve(lv_store->size());
 
-    auto volumes = visitor.build_volume_vector();
-    CELER_LOG(debug) << "Loaded " << volumes.size() << " volumes with "
+    // Recursive loop over all logical volumes to populate volumes
+    visit_geant_volumes(
+        [unique_volumes, &result](G4LogicalVolume const& lv) {
+            auto i = static_cast<std::size_t>(lv.GetInstanceID());
+            if (i >= result.size())
+            {
+                result.resize(i + 1);
+            }
+
+            ImportVolume& volume = result[lv.GetInstanceID()];
+            if (auto* cuts = lv.GetMaterialCutsCouple())
+            {
+                volume.material_id = cuts->GetIndex();
+            }
+            volume.name = lv.GetName();
+            volume.solid_name = lv.GetSolid()->GetName();
+
+            if (volume.name.empty())
+            {
+                CELER_LOG(warning)
+                    << "No logical volume name specified for instance ID " << i
+                    << " (material " << volume.material_id << ")";
+            }
+            else if (unique_volumes)
+            {
+                // Add pointer as GDML writer does
+                volume.name = make_gdml_name(lv);
+            }
+        },
+        *world_->GetLogicalVolume());
+
+    CELER_LOG(debug) << "Loaded " << result.size() << " volumes with "
                      << (unique_volumes ? "uniquified" : "original")
                      << " names";
-    return volumes;
+    return result;
 }
 
 //---------------------------------------------------------------------------//

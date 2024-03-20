@@ -12,10 +12,11 @@
 #include "corecel/data/ParamsDataInterface.hh"
 
 #include "CerenkovData.hh"
-#include "OpticalPropertyData.hh"
 
 namespace celeritas
 {
+class OpticalPropertyParams;
+
 //---------------------------------------------------------------------------//
 /*!
  * Build and manage Cerenkov data.
@@ -23,8 +24,14 @@ namespace celeritas
 class CerenkovParams final : public ParamsDataInterface<CerenkovData>
 {
   public:
+    //!@{
+    //! \name Type aliases
+    using SPConstProperties = std::shared_ptr<OpticalPropertyParams const>;
+    //!@}
+
+  public:
     // Construct with optical property data
-    explicit CerenkovParams(HostCRef<OpticalPropertyData> const& properties);
+    explicit CerenkovParams(SPConstProperties properties);
 
     //! Access physics properties on the host
     HostRef const& host_ref() const final { return data_.host_ref(); }

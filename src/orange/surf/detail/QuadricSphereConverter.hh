@@ -10,8 +10,9 @@
 #include <optional>
 
 #include "corecel/math/SoftEqual.hh"
-#include "orange/surf/Plane.hh"
-#include "orange/surf/SimpleQuadric.hh"
+
+#include "../Plane.hh"
+#include "../SimpleQuadric.hh"
 
 namespace celeritas
 {
@@ -102,6 +103,9 @@ QuadricSphereConverter::operator()(SimpleQuadric const& sq) const
         // No real solution
         return {};
     }
+
+    // Clear potential signed zeros before returning
+    origin += real_type{0};
     return Sphere::from_radius_sq(origin, radius_sq);
 }
 

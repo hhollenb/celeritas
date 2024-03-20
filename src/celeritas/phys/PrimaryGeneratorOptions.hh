@@ -7,11 +7,12 @@
 //---------------------------------------------------------------------------//
 #pragma once
 
+#include <algorithm>
 #include <functional>
 #include <random>
 
 #include "corecel/io/StringEnumMapper.hh"
-#include "orange/Types.hh"
+#include "geocel/Types.hh"
 
 #include "PDGNumber.hh"
 

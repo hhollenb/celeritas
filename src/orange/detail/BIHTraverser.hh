@@ -8,8 +8,9 @@
 #pragma once
 
 #include "corecel/math/Algorithms.hh"
-#include "orange/BoundingBoxUtils.hh"
-#include "orange/OrangeData.hh"
+
+#include "../BoundingBoxUtils.hh"
+#include "../OrangeData.hh"
 
 namespace celeritas
 {
@@ -18,6 +19,8 @@ namespace detail
 //---------------------------------------------------------------------------//
 /*!
  * Traverse BIH tree using a depth-first search.
+ *
+ * \todo move to top-level orange directory out of detail namespace
  */
 class BIHTraverser
 {
@@ -28,7 +31,7 @@ class BIHTraverser
     //!@}
 
     // Construct from vector of bounding boxes and storage for LocalVolumeIds
-    explicit inline CELER_FUNCTION
+    inline CELER_FUNCTION
     BIHTraverser(BIHTree const& tree, Storage const& storage);
 
     // Point-in-volume operation

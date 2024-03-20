@@ -14,8 +14,8 @@
 #include "corecel/data/Collection.hh"
 #include "corecel/data/CollectionBuilder.hh"
 #include "corecel/sys/ThreadId.hh"
+#include "geocel/BoundingBox.hh"
 
-#include "BoundingBox.hh"
 #include "OrangeTypes.hh"
 #include "detail/BIHData.hh"
 #include "univ/detail/Types.hh"
@@ -260,6 +260,8 @@ struct UniverseIndexerData
 //---------------------------------------------------------------------------//
 /*!
  * Persistent data used by all BIH trees.
+ *
+ * \todo move to orange/BihTreeData
  */
 template<Ownership W, MemSpace M>
 struct BIHTreeData

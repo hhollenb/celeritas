@@ -10,13 +10,13 @@
 #include "corecel/Types.hh"
 #include "corecel/data/CollectionBuilder.hh"
 #include "corecel/data/DedupeCollectionBuilder.hh"
-#include "orange/OrangeData.hh"
-#include "orange/OrangeTypes.hh"
-#include "orange/construct/OrangeInput.hh"
 
 #include "BIHBuilder.hh"
 #include "SurfacesRecordBuilder.hh"
-#include "TransformInserter.hh"
+#include "TransformRecordInserter.hh"
+#include "../OrangeData.hh"
+#include "../OrangeInput.hh"
+#include "../OrangeTypes.hh"
 
 namespace celeritas
 {
@@ -47,7 +47,7 @@ class UnitInserter
   private:
     Data* orange_data_{nullptr};
     BIHBuilder build_bih_tree_;
-    TransformInserter insert_transform_;
+    TransformRecordInserter insert_transform_;
     SurfacesRecordBuilder build_surfaces_;
     UniverseInserter* insert_universe_;
 

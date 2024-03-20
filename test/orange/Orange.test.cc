@@ -9,12 +9,12 @@
 #include <type_traits>
 
 #include "corecel/math/Algorithms.hh"
+#include "geocel/Types.hh"
+#include "orange/OrangeInput.hh"
 #include "orange/OrangeParams.hh"
 #include "orange/OrangeParamsOutput.hh"
 #include "orange/OrangeTrackView.hh"
 #include "orange/OrangeTypes.hh"
-#include "orange/Types.hh"
-#include "orange/construct/OrangeInput.hh"
 #include "celeritas/Constants.hh"
 
 #include "OrangeGeoTestBase.hh"

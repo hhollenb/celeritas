@@ -14,12 +14,13 @@
 #include "celeritas/Types.hh"
 #include "celeritas/em/data/WentzelData.hh"
 #include "celeritas/em/distribution/WentzelDistribution.hh"
-#include "celeritas/em/interactor/detail/PhysicsConstants.hh"
 #include "celeritas/mat/ElementView.hh"
 #include "celeritas/mat/MaterialView.hh"
 #include "celeritas/phys/CutoffView.hh"
 #include "celeritas/phys/Interaction.hh"
 #include "celeritas/phys/ParticleTrackView.hh"
+
+#include "detail/PhysicsConstants.hh"
 
 namespace celeritas
 {
@@ -102,7 +103,7 @@ WentzelInteractor::WentzelInteractor(WentzelRef const& shared,
                    target,
                    shared.elem_data[el_id],
                    // TODO: Use proton when supported
-                   value_as<Energy>(cutoffs.energy(shared.ids.electron)),
+                   cutoffs.energy(shared.ids.electron),
                    shared)
 {
     CELER_EXPECT(particle_.particle_id() == shared.ids.electron

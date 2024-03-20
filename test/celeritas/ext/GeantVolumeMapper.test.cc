@@ -12,7 +12,7 @@
 #include <vector>
 
 #include "celeritas_config.h"
-#include "celeritas/ext/GeantGeoUtils.hh"
+#include "geocel/GeantGeoUtils.hh"
 #include "celeritas/geo/GeoParams.hh"
 
 #include "celeritas_test.hh"
@@ -29,14 +29,14 @@
 #    include <G4VSolid.hh>
 #endif
 #if CELERITAS_USE_VECGEOM
-#    include "celeritas/ext/VecgeomParams.hh"
+#    include "geocel/vg/VecgeomParams.hh"
 #endif
 
 #include "corecel/ScopedLogStorer.hh"
 #include "corecel/io/Logger.hh"
 #include "corecel/sys/MpiCommunicator.hh"
+#include "orange/OrangeInput.hh"
 #include "orange/OrangeParams.hh"
-#include "orange/construct/OrangeInput.hh"
 #include "orange/surf/Sphere.hh"
 
 class G4VSolid;

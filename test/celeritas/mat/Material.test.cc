@@ -11,8 +11,8 @@
 #include <limits>
 
 #include "corecel/data/CollectionStateStore.hh"
+#include "geocel/UnitUtils.hh"
 #include "celeritas/Quantities.hh"
-#include "celeritas/UnitUtils.hh"
 #include "celeritas/ext/RootImporter.hh"
 #include "celeritas/ext/ScopedRootErrorHandler.hh"
 #include "celeritas/io/ImportData.hh"
@@ -307,7 +307,7 @@ TEST_F(MaterialTest, isotope_view)
     EXPECT_VEC_SOFT_EQ(expected_nuclear_masses, nuclear_masses);
 }
 
-TEST_F(MaterialTest, TEST_IF_CELERITAS_DOUBLE(output))
+TEST_F(MaterialTest, output)
 {
     MaterialParamsOutput out(params);
     EXPECT_EQ("material", out.label());

@@ -40,37 +40,21 @@ class ScintillationGeneratorTest : public Test
   protected:
     void SetUp() override
     {
-        // Test scintillation spectrum: only one material with three components
-        HostVal<ScintillationData> data;
-        static constexpr size_type num_components = 3;
         static constexpr double nm = 1e-9 * units::meter;
         static constexpr double ns = 1e-9 * units::second;
 
-        using Real3 = Array<real_type, num_components>;
-        Real3 yield_prob = {0.65713, 0.31987, 1 - 0.65713 - 0.31987};
-        Real3 lambda_mean = {128 * nm, 128 * nm, 200 * nm};
-        Real3 lambda_sigma = {10 * nm, 10 * nm, 20 * nm};
-        Real3 rise_time = {10 * ns, 10 * ns, 10 * ns};
-        Real3 fall_time = {6 * ns, 1500 * ns, 3000 * ns};
-
-        std::vector<ScintillationComponent> components;
-        for (size_type i = 0; i < num_components; ++i)
-        {
-            if (yield_prob[i] > 0)
-            {
-                ScintillationComponent component;
-                component.yield_prob = yield_prob[i];
-                component.lambda_mean = lambda_mean[i];
-                component.lambda_sigma = lambda_sigma[i];
-                component.rise_time = rise_time[i];
-                component.fall_time = fall_time[i];
-                components.push_back(component);
-            }
-        }
-
-        ScintillationParams::ScintillationInput input;
-        input.data.push_back(components);
-        params = std::make_shared<ScintillationParams>(input);
+        // Test scintillation spectrum: only one material with three components
+        ImportScintSpectrum spectrum;
+        spectrum.yield = 5;
+        spectrum.resolution_scale = 1;
+        spectrum.components.push_back(
+            {0.65713, 128 * nm, 10 * nm, 10 * ns, 6 * ns});
+        spectrum.components.push_back(
+            {0.31987, 128 * nm, 10 * nm, 10 * ns, 1500 * ns});
+        spectrum.components.push_back(
+            {0.023, 200 * nm, 20 * nm, 10 * ns, 3000 * ns});
+        params = std::make_shared<ScintillationParams>(
+            ScintillationParams::Input{{spectrum}});
 
         // Test step input
         dist_.num_photons = 4;
@@ -140,27 +124,27 @@ TEST_F(ScintillationGeneratorTest, basic)
 
     if (CELERITAS_REAL_TYPE == CELERITAS_REAL_TYPE_DOUBLE)
     {
-        const real_type expected_energy[] = {9.3561354787881e-06,
+        real_type const expected_energy[] = {9.3561354787881e-06,
                                              9.39574581587642e-06,
                                              1.09240249982534e-05,
                                              6.16620934051192e-06};
 
-        const real_type expected_time[] = {7.30250028666843e-09,
+        real_type const expected_time[] = {7.30250028666843e-09,
                                            1.05142594015847e-08,
                                            3.11699961936832e-06,
                                            2.68409417173788e-06};
 
-        const real_type expected_cos_theta[] = {0.937735542248463,
+        real_type const expected_cos_theta[] = {0.937735542248463,
                                                 -0.775070967887639,
                                                 0.744857640134601,
                                                 -0.748206733055997};
 
-        const real_type expected_polarization_x[] = {-0.714016941727313,
+        real_type const expected_polarization_x[] = {-0.714016941727313,
                                                      0.74609610658139,
                                                      -0.456101107552679,
                                                      0.0275013929040768};
 
-        const real_type expected_cos_polar[] = {0, 0, 0, 0};
+        real_type const expected_cos_polar[] = {0, 0, 0, 0};
 
         EXPECT_VEC_SOFT_EQ(expected_energy, energy);
         EXPECT_VEC_SOFT_EQ(expected_time, time);

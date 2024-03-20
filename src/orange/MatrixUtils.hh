@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
 //! \file orange/MatrixUtils.hh
+// TODO: split into BLAS and host-only utils
 //---------------------------------------------------------------------------//
 #pragma once
 
@@ -12,8 +13,7 @@
 #include "corecel/Macros.hh"
 #include "corecel/cont/Array.hh"
 #include "corecel/math/Turn.hh"
-
-#include "Types.hh"
+#include "geocel/Types.hh"
 
 namespace celeritas
 {

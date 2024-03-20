@@ -12,11 +12,13 @@
 #include <vector>
 
 #include "corecel/io/Label.hh"
-#include "orange/BoundingBox.hh"
+#include "geocel/BoundingBox.hh"
 #include "orange/OrangeTypes.hh"
-#include "orange/construct/CsgTree.hh"
-#include "orange/construct/CsgTypes.hh"
 #include "orange/surf/VariantSurface.hh"
+#include "orange/transform/VariantTransform.hh"
+
+#include "../CsgTree.hh"
+#include "../CsgTypes.hh"
 
 namespace celeritas
 {
@@ -44,7 +46,6 @@ struct CsgUnit
 
     using Metadata = Label;
     using SetMd = std::set<Metadata>;
-    using NodeId = ::celeritas::csg::NodeId;
     using BBox = ::celeritas::BoundingBox<>;
     using Fill = std::variant<std::monostate, MaterialId, Daughter>;
 

@@ -9,8 +9,7 @@
 
 #include "corecel/Macros.hh"
 #include "corecel/cont/Span.hh"
-
-#include "../OrangeTypes.hh"
+#include "orange/OrangeTypes.hh"
 
 namespace celeritas
 {
@@ -67,6 +66,24 @@ class NoTransformation
     //! Rotate from parent to daughter (identity)
     CELER_FUNCTION Real3 const& rotate_down(Real3 const& d) const { return d; }
 };
+
+//---------------------------------------------------------------------------//
+// FREE FUNCTIONS
+//---------------------------------------------------------------------------//
+//!@{
+//! Host-only comparators
+inline constexpr bool
+operator==(NoTransformation const&, NoTransformation const&)
+{
+    return true;
+}
+
+inline constexpr bool
+operator!=(NoTransformation const&, NoTransformation const&)
+{
+    return false;
+}
+//!@}
 
 //---------------------------------------------------------------------------//
 }  // namespace celeritas

@@ -15,10 +15,10 @@
 #include "corecel/io/Logger.hh"
 #include "corecel/math/ArrayOperators.hh"
 #include "corecel/math/ArrayUtils.hh"
-#include "celeritas/GenericGeoTestBase.hh"
-#include "celeritas/UnitUtils.hh"
+#include "geocel/UnitUtils.hh"
+#include "geocel/g4/GeantGeoParams.hh"
+#include "geocel/g4/GeantGeoTestBase.hh"
 #include "celeritas/Units.hh"
-#include "celeritas/ext/GeantGeoParams.hh"
 
 #include "celeritas_test.hh"
 
@@ -46,7 +46,7 @@ namespace test
  * |        700  | fe_muon_chambers |
  * |             | world |
  */
-class TouchableUpdaterTest : public ::celeritas::test::GenericGeantGeoTestBase
+class TouchableUpdaterTest : public ::celeritas::test::GeantGeoTestBase
 {
   protected:
     void SetUp() override

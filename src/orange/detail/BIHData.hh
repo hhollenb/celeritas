@@ -3,7 +3,8 @@
 // See the top-level COPYRIGHT file for details.
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
-//! \file orange/OrangeData.hh
+//! \file orange/detail/BIHData.hh
+//! \todo move to orange/BihTreeData
 //---------------------------------------------------------------------------//
 #pragma once
 
@@ -11,8 +12,9 @@
 #include "corecel/Types.hh"
 #include "corecel/cont/EnumArray.hh"
 #include "corecel/data/Collection.hh"
-#include "orange/BoundingBox.hh"
-#include "orange/OrangeTypes.hh"
+#include "geocel/BoundingBox.hh"
+
+#include "../OrangeTypes.hh"
 
 namespace celeritas
 {
@@ -73,6 +75,8 @@ struct BIHLeafNode
  * Bounding Interval Hierarchy tree.
  *
  * Infinite bounding boxes are not included in the main tree.
+ *
+ * \todo Rename BihTreeRecord
  */
 struct BIHTree
 {

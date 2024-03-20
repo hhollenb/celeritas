@@ -10,8 +10,9 @@
 #include <optional>
 
 #include "corecel/math/SoftEqual.hh"
-#include "orange/surf/ConeAligned.hh"
-#include "orange/surf/SimpleQuadric.hh"
+
+#include "../ConeAligned.hh"
+#include "../SimpleQuadric.hh"
 
 namespace celeritas
 {
@@ -119,6 +120,8 @@ QuadricConeConverter::operator()(AxisTag<T>, SimpleQuadric const& sq) const
         return {};
     }
 
+    // Clear potential signed zeros before returning
+    origin += real_type{0};
     return ConeAligned<T>::from_tangent_sq(origin, tsq);
 }
 

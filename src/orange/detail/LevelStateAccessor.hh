@@ -8,10 +8,13 @@
 #pragma once
 
 #include "corecel/data/Collection.hh"
-#include "orange/OrangeData.hh"
-#include "orange/OrangeTypes.hh"
+
+#include "../OrangeData.hh"
+#include "../OrangeTypes.hh"
 
 namespace celeritas
+{
+namespace detail
 {
 //---------------------------------------------------------------------------//
 /*!
@@ -115,4 +118,5 @@ LevelStateAccessor::operator=(LevelStateAccessor const& other)
 }
 
 //---------------------------------------------------------------------------//
+}  // namespace detail
 }  // namespace celeritas

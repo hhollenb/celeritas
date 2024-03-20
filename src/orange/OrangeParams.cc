@@ -23,12 +23,12 @@
 #include "corecel/io/Logger.hh"
 #include "corecel/io/ScopedTimeLog.hh"
 #include "corecel/io/StringUtils.hh"
-#include "orange/BoundingBox.hh"
+#include "geocel/BoundingBox.hh"
 
 #include "OrangeData.hh"  // IWYU pragma: associated
+#include "OrangeInput.hh"
 #include "OrangeTypes.hh"
-#include "construct/DepthCalculator.hh"
-#include "construct/OrangeInput.hh"
+#include "detail/DepthCalculator.hh"
 #include "detail/RectArrayInserter.hh"
 #include "detail/UnitInserter.hh"
 #include "detail/UniverseInserter.hh"
@@ -37,7 +37,7 @@
 #if CELERITAS_USE_JSON
 #    include <nlohmann/json.hpp>
 
-#    include "construct/OrangeInputIO.json.hh"
+#    include "OrangeInputIO.json.hh"
 #endif
 
 namespace celeritas
@@ -127,7 +127,7 @@ OrangeParams::OrangeParams(OrangeInput input)
     // Create host data for construction, setting tolerances first
     HostVal<OrangeParamsData> host_data;
     host_data.scalars.tol = input.tol;
-    host_data.scalars.max_depth = DepthCalculator{input.universes}();
+    host_data.scalars.max_depth = detail::DepthCalculator{input.universes}();
 
     // Insert all universes
     {
