@@ -90,6 +90,13 @@ inline constexpr bool operator<(PDGNumber lhs, PDGNumber rhs)
  * various processes in Celeritas. (Unlike an enumeration, though, PDG codes
  * can be arbitary and aren't limited to the ones defined below.) They should
  * be extended as needed when new particle types are used by processes.
+ *
+ * PDG numbers between 81 and 100 are reserved for internal use.
+ * The table shows which internal arbitrary numbers are currently defined:
+ *
+ * | Particle name | PDG |
+ * | ------------- | --- |
+ * | Generic ion   | 90  |
  */
 namespace pdg
 {
@@ -108,12 +115,15 @@ CELER_DEFINE_PDGNUMBER(positron, -11)
 CELER_DEFINE_PDGNUMBER(mu_minus, 13)
 CELER_DEFINE_PDGNUMBER(mu_plus, -13)
 CELER_DEFINE_PDGNUMBER(gamma, 22)
+CELER_DEFINE_PDGNUMBER(ion, 90)
 CELER_DEFINE_PDGNUMBER(pi_plus, 211)
 CELER_DEFINE_PDGNUMBER(pi_minus, -211)
 CELER_DEFINE_PDGNUMBER(kaon_plus, 321)
 CELER_DEFINE_PDGNUMBER(kaon_minus, -321)
 CELER_DEFINE_PDGNUMBER(proton, 2212)
 CELER_DEFINE_PDGNUMBER(anti_proton, -2212)
+CELER_DEFINE_PDGNUMBER(neutron, 2112)
+CELER_DEFINE_PDGNUMBER(anti_neutron, -2112)
 CELER_DEFINE_PDGNUMBER(he3, 1000020030)
 CELER_DEFINE_PDGNUMBER(anti_he3, -1000020030)
 CELER_DEFINE_PDGNUMBER(alpha, 1000020040)

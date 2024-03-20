@@ -77,6 +77,7 @@ celeritas_add_library(testcel_celeritas
   global/StepperTestBase.cc
   grid/CalculatorTestBase.cc
   io/EventIOTestBase.cc
+  neutron/NeutronTestBase.cc
   optical/OpticalTestBase.cc
   phys/InteractionIO.cc
   phys/InteractorHostTestBase.cc
@@ -131,7 +132,7 @@ celeritas_add_test(em/MuBremsstrahlung.test.cc ${_needs_double})
 celeritas_add_test(em/Rayleigh.test.cc ${_needs_double})
 celeritas_add_test(em/RelativisticBrem.test.cc ${_needs_double})
 celeritas_add_test(em/SeltzerBerger.test.cc ${_needs_double})
-celeritas_add_test(em/Wentzel.test.cc ${_fixme_single})
+celeritas_add_test(em/CoulombScattering.test.cc ${_fixme_single})
 
 celeritas_add_test(em/UrbanMsc.test.cc ${_needs_root}
   ${_optional_geant4_env})
@@ -287,6 +288,11 @@ celeritas_add_test(mat/ElementSelector.test.cc)
 celeritas_add_device_test(mat/Material)
 
 #-----------------------------------------------------------------------------#
+# Neutron
+set(CELERITASTEST_PREFIX celeritas/neutron)
+celeritas_add_test(neutron/NeutronElastic.test.cc ${_needs_double})
+
+#-----------------------------------------------------------------------------#
 # Phys
 set(CELERITASTEST_PREFIX celeritas/phys)
 celeritas_add_test(phys/CutoffParams.test.cc)
@@ -377,10 +383,11 @@ celeritas_add_test(user/StepCollector.test.cc
 #-----------------------------------------------------------------------------#
 
 function(celeritas_add_rootupdate_target target filename)
+  set(_gdml "${PROJECT_SOURCE_DIR}/test/geocel/data/${filename}.gdml")
   set(_basename "${CMAKE_CURRENT_SOURCE_DIR}/data/${filename}")
   if(CELERITAS_USE_Geant4)
     set(_cmake_env
-      "${CMAKE_COMMAND}" "-E" "env" "${_geant4_test_env}"
+      "${CMAKE_COMMAND}" "-E" "env" "${CELERITASTEST_G4ENV}"
     )
   else()
     set(_cmake_env)
@@ -389,7 +396,7 @@ function(celeritas_add_rootupdate_target target filename)
     COMMAND
       ${_cmake_env}
       "$<TARGET_FILE:celer-export-geant>"
-      "${_basename}.gdml"
+      "${_gdml}"
       "${_basename}.geant.json"
       "${_basename}.root"
     VERBATIM

@@ -7,6 +7,7 @@
 //---------------------------------------------------------------------------//
 #pragma once
 
+#include <map>
 #include <set>
 #include <variant>
 #include <vector>
@@ -17,6 +18,7 @@
 #include "orange/surf/VariantSurface.hh"
 #include "orange/transform/VariantTransform.hh"
 
+#include "BoundingZone.hh"
 #include "../CsgTree.hh"
 #include "../CsgTypes.hh"
 
@@ -34,11 +36,11 @@ namespace detail
  * These are stored in a way so that they can be remapped and/or optimized
  * further before committing them to the constructed GPU data.
  *
- * The "exterior" is optional *only* in the degenerate case of an infinite
- * global universe (TODO: prohibit this??)
+ * All bounding boxes and transforms are "local" within the CSG unit's
+ * reference frame, not relative to any other CSG node nor to any parent
+ * universe. (TODO: add bounds and transforms only for finite regions)
  *
- * TODO: improve metadata (provenance, nicer container, mapping?, calculated
- * volumes)
+ * TODO: map of SP object to detailed provenance?
  */
 struct CsgUnit
 {
@@ -46,8 +48,14 @@ struct CsgUnit
 
     using Metadata = Label;
     using SetMd = std::set<Metadata>;
-    using BBox = ::celeritas::BoundingBox<>;
     using Fill = std::variant<std::monostate, MaterialId, Daughter>;
+
+    //! Attributes about a closed volume of space
+    struct Region
+    {
+        BoundingZone bounds;  //!< Interior/exterior bbox
+        TransformId transform_id;  //!< Region-to-unit transform
+    };
 
     //// DATA ////
 
@@ -61,8 +69,8 @@ struct CsgUnit
     //! \name Nodes
     //! Vectors are indexed by NodeId.
     CsgTree tree;  //!< CSG tree
-    std::vector<SetMd> metadata;  //!< CSG node labels and provenance
-    std::vector<BBox> bboxes;
+    std::vector<SetMd> metadata;  //!< CSG node labels
+    std::map<NodeId, Region> regions;  //!< Bounds and transforms
     //!@}
 
     //!@{
@@ -70,7 +78,7 @@ struct CsgUnit
     //! Vectors are indexed by LocalVolumeId.
     std::vector<NodeId> volumes;  //!< CSG node of each volume
     std::vector<Fill> fills;  //!< Content of each volume
-    NodeId exterior;
+    MaterialId background;  //!< Optional background fill
     //!@}
 
     //!@{
@@ -105,8 +113,7 @@ inline constexpr bool is_filled(CsgUnit::Fill const& fill)
  */
 CsgUnit::operator bool() const
 {
-    return this->metadata.size() == this->tree.size()
-           && this->bboxes.size() == this->tree.size() && !this->volumes.empty()
+    return this->metadata.size() == this->tree.size() && !this->volumes.empty()
            && this->volumes.size() == this->fills.size();
 }
 
@@ -117,9 +124,8 @@ CsgUnit::operator bool() const
 bool CsgUnit::empty() const
 {
     return this->surfaces.empty() && this->metadata.empty()
-           && this->bboxes.empty() && this->volumes.empty()
-           && this->fills.empty() && !this->exterior
-           && this->transforms.empty();
+           && this->regions.empty() && this->volumes.empty()
+           && this->fills.empty() && this->transforms.empty();
 }
 
 //---------------------------------------------------------------------------//

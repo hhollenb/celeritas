@@ -18,6 +18,7 @@
 #include "celeritas/em/data/LivermorePEData.hh"
 #include "celeritas/grid/ValueGridData.hh"
 #include "celeritas/grid/XsGridData.hh"
+#include "celeritas/neutron/data/NeutronElasticData.hh"
 
 #include "Interaction.hh"
 #include "Secondary.hh"
@@ -173,6 +174,11 @@ struct HardwiredModels
     ModelId eplusgg;
     EPlusGGData eplusgg_data;
 
+    // Neutron elastic
+    ProcessId neutron_elastic;
+    ModelId chips;
+    NeutronElasticData<W, M> chips_data;
+
     //// MEMBER FUNCTIONS ////
 
     //! Assign from another set of hardwired models
@@ -193,6 +199,14 @@ struct HardwiredModels
         eplusgg = other.eplusgg;
         eplusgg_data = other.eplusgg_data;
 
+        neutron_elastic = other.neutron_elastic;
+        if (neutron_elastic)
+        {
+            // Only assign neutron_elastic data if that process is present
+            chips = other.chips;
+            chips_data = other.chips_data;
+        }
+
         return *this;
     }
 };
@@ -201,7 +215,8 @@ struct HardwiredModels
 /*!
  * Scalar (no template needed) quantities used by physics.
  *
- * The user-configurable constants are described in \c PhysicsParams .
+ * The user-configurable constants and multiple scattering options are
+ * described in \c PhysicsParams .
  *
  * The \c model_to_action value corresponds to the \c ActionId for the first \c
  * ModelId . Additionally it implies (by construction in physics_params) the
@@ -226,6 +241,12 @@ struct PhysicsParamsScalars
     real_type linear_loss_limit{};  //!< For scaled range calculation
     real_type fixed_step_limiter{};  //!< Global charged step size limit [len]
 
+    // User-configurable multiple scattering options
+    real_type lambda_limit{};  //!< lambda limit
+    real_type range_factor{};  //!< range factor for e-/e+ (0.2 for muon/h)
+    real_type safety_factor{};  //!< safety factor
+    MscStepLimitAlgorithm step_limit_algorithm{MscStepLimitAlgorithm::size_};
+
     real_type secondary_stack_factor = 3;  //!< Secondary storage per state
                                            //!< size
 
@@ -241,7 +262,10 @@ struct PhysicsParamsScalars
                && lowest_electron_energy > zero_quantity()
                && linear_loss_limit > 0 && secondary_stack_factor > 0
                && ((fixed_step_limiter > 0)
-                   == static_cast<bool>(fixed_step_action));
+                   == static_cast<bool>(fixed_step_action))
+               && lambda_limit > 0 && range_factor > 0 && range_factor < 1
+               && safety_factor >= 0.1
+               && step_limit_algorithm != MscStepLimitAlgorithm::size_;
     }
 
     //! Stop early due to MSC limitation

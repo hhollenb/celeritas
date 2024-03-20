@@ -109,6 +109,46 @@ char const* to_cstring(SurfaceType value)
 
 //---------------------------------------------------------------------------//
 /*!
+ * Get a string corresponding to a transform type.
+ */
+char const* to_cstring(TransformType value)
+{
+    static EnumStringMapper<TransformType> const to_cstring_impl{
+        "no_transformation",
+        "translation",
+        "transformation",
+    };
+    return to_cstring_impl(value);
+}
+
+//---------------------------------------------------------------------------//
+/*!
+ * Get a string corresponding to a transform type.
+ */
+char const* to_cstring(ZOrder zo)
+{
+    switch (zo)
+    {
+        case ZOrder::invalid:
+            return "invalid";
+        case ZOrder::background:
+            return "background";
+        case ZOrder::media:
+            return "media";
+        case ZOrder::array:
+            return "array";
+        case ZOrder::hole:
+            return "hole";
+        case ZOrder::implicit_exterior:
+            return "implicit_exterior";
+        case ZOrder::exterior:
+            return "exterior";
+    };
+    CELER_VALIDATE(false, << "invalid ZOrder");
+}
+
+//---------------------------------------------------------------------------//
+/*!
  * Get a printable character corresponding to a z ordering.
  */
 char to_char(ZOrder zo)
