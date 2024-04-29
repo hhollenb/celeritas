@@ -397,7 +397,7 @@ TEST_F(CoulombScatteringTest, distribution)
 
 TEST_F(CoulombScatteringTest, my_test)
 {
-    WentzelHostRef const& data = model_->host_ref();
+    auto const& data = model_->host_ref();
 
     AtomicNumber const target_z{82};
 
@@ -417,7 +417,7 @@ TEST_F(CoulombScatteringTest, my_test)
     {
         this->set_inc_particle(pdg::electron(), MevEnergy{energy});
 
-        WentzelRatioCalculator calc(
+        WentzelHelper calc(
             particle_track(), target_z, data, cutoff_energy);
 
         auto const& particle = particle_track();
