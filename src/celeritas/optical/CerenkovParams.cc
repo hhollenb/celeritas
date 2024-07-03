@@ -26,29 +26,46 @@ namespace celeritas
 /*!
  * Construct with optical property data.
  */
-CerenkovParams::CerenkovParams(SPConstProperties properties)
+template<>
+class DataBuilder<CerenkovData> : public GridDataBuilder<CerenkovData>
 {
-    CELER_EXPECT(properties);
-    auto const& host_ref = properties->host_ref();
-
-    HostVal<CerenkovData> data;
-    GenericGridInserter insert_angle_integral(&data.reals,
-                                              &data.angle_integral);
-
-    for (auto mat_id :
-         range(OpticalMaterialId(host_ref.refractive_index.size())))
+  public:
+    DataBuilder(HostVal<CerenkovData>* host_data)
+        : GridDataBuilder<CerenkovData>(host_data)
     {
-        auto const& ri_grid = host_ref.refractive_index[mat_id];
-        if (!ri_grid)
-        {
-            // No refractive index data stored for this material
-            insert_angle_integral();
-            continue;
-        }
+    }
 
-        // Calculate the Cerenkov angle integral
-        auto const&& refractive_index = host_ref.reals[ri_grid.value];
-        auto const&& energy = host_ref.reals[ri_grid.grid];
+    void operator()(CerenkovParams::SPConstProperties properties)
+    {
+        CELER_EXPECT(properties);
+
+        auto const& host_ref = properties->host_ref();
+        auto opt_materials
+            = range(OpticalMaterialId{host_ref.refractive_index.size()});
+
+        ListBuilder{opt_materials}(
+            &host_data_->angle_integral,
+            host_ref.refractive_index[opt_materials],
+            [&](auto const& ri_grid) -> GenericGridData {
+                if (!ri_grid)
+                {
+                    // No refractive index data stored for this material
+                    return {};
+                }
+
+                return import_angle_integral(host_ref.reals[ri_grid.value],
+                                             host_ref.reals[ri_grid.grid]);
+            });
+
+        CELER_ASSERT(host_data_->angle_integral.size()
+                     == host_ref.refractive_index.size());
+    }
+
+  private:
+    GenericGridData
+    import_angle_integral(Span<real_type const> refractive_index,
+                          Span<real_type const> energy)
+    {
         std::vector<real_type> integral(energy.size());
         for (size_type i = 1; i < energy.size(); ++i)
         {
@@ -58,13 +75,14 @@ CerenkovParams::CerenkovParams(SPConstProperties properties)
                                    + 1 / ipow<2>(refractive_index[i]));
         }
 
-        insert_angle_integral(make_span(energy), make_span(integral));
+        return build_grid_(energy, make_span(integral));
     }
-    CELER_ASSERT(data.angle_integral.size()
-                 == host_ref.refractive_index.size());
+};
 
-    data_ = CollectionMirror<CerenkovData>{std::move(data)};
-    CELER_ENSURE(data_ || host_ref.refractive_index.empty());
+CerenkovParams::CerenkovParams(SPConstProperties properties)
+    : MirroredParamDataInterface<CerenkovData>(properties)
+{
+    CELER_ENSURE(data_ || properties->host_ref().refractive_index.empty());
 }
 
 //---------------------------------------------------------------------------//
