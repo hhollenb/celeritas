@@ -12,6 +12,7 @@
 #include "corecel/data/ParamsDataInterface.hh"
 #include "celeritas/io/ImportOpticalMaterial.hh"
 
+#include "DataBuilder.hh"
 #include "ScintillationData.hh"
 
 namespace celeritas
@@ -28,7 +29,8 @@ struct ImportData;
  * stored), the manually constructed \c Input data must store *either* material
  * or particle data, never both.
  */
-class ScintillationParams final : public ParamsDataInterface<ScintillationData>
+class ScintillationParams final
+    : public MirroredParamDataInterface<ScintillationData>
 {
   public:
     //!@{
@@ -68,22 +70,6 @@ class ScintillationParams final : public ParamsDataInterface<ScintillationData>
 
     // Construct with scintillation components
     explicit ScintillationParams(Input const& input);
-
-    //! Access physics properties on the host
-    HostRef const& host_ref() const final { return mirror_.host_ref(); }
-
-    //! Access physics properties on the device
-    DeviceRef const& device_ref() const final { return mirror_.device_ref(); }
-
-  private:
-    // Host/device storage and reference
-    CollectionMirror<ScintillationData> mirror_;
-
-    //// HELPER FUNCTIONS ////
-
-    // Convert imported scintillation components to Celeritas' components
-    std::vector<ScintillationComponent>
-    build_components(std::vector<ImportScintComponent> const& input_comp);
 };
 
 //---------------------------------------------------------------------------//

@@ -12,6 +12,7 @@
 #include "corecel/data/ParamsDataInterface.hh"
 
 #include "CerenkovData.hh"
+#include "DataBuilder.hh"
 
 namespace celeritas
 {
@@ -21,7 +22,7 @@ class OpticalPropertyParams;
 /*!
  * Build and manage Cerenkov data.
  */
-class CerenkovParams final : public ParamsDataInterface<CerenkovData>
+class CerenkovParams final : public MirroredParamDataInterface<CerenkovData>
 {
   public:
     //!@{
@@ -32,15 +33,6 @@ class CerenkovParams final : public ParamsDataInterface<CerenkovData>
   public:
     // Construct with optical property data
     explicit CerenkovParams(SPConstProperties properties);
-
-    //! Access physics properties on the host
-    HostRef const& host_ref() const final { return data_.host_ref(); }
-
-    //! Access physics properties on the device
-    DeviceRef const& device_ref() const final { return data_.device_ref(); }
-
-  private:
-    CollectionMirror<CerenkovData> data_;
 };
 
 //---------------------------------------------------------------------------//
