@@ -2,38 +2,44 @@
 // Copyright Celeritas contributors: see top-level COPYRIGHT file for details
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
-//! \file celeritas/optical/action/detail/BoundaryExecutor.hh
+//! \file celeritas/optical/surface/InitBoundaryExecutor.hh
 //---------------------------------------------------------------------------//
 #pragma once
 
 #include "corecel/Assert.hh"
 #include "corecel/Macros.hh"
-#include "celeritas/Types.hh"
 #include "celeritas/geo/GeoTrackView.hh"
 #include "celeritas/optical/CoreTrackView.hh"
-#include "celeritas/optical/MaterialView.hh"
 #include "celeritas/optical/SimTrackView.hh"
+#include "celeritas/optical/Types.hh"
 
 namespace celeritas
 {
 namespace optical
 {
-namespace detail
-{
 //---------------------------------------------------------------------------//
 /*!
- * Cross a geometry boundary.
+ * Initialize a track for crossing a boundary that has surface physics enabled.
  *
- * \pre The track must have already been physically moved to the correct point
- * on the boundary.
+ * The track is expected to be on a boundary in the pre-crossing volume, and is
+ * then crosses the boundary to get the post-crossing volume. If a surface
+ * exists between these volumes then the surface ID and normal are filled in
+ * the track's surface state data. Otherwise the track is killed at the
+ * surface.
  */
-struct BoundaryExecutor
+struct InitBoundaryExecutor
 {
-    inline CELER_FUNCTION void operator()(CoreTrackView& track);
+    // Initialize track for boundary crossing
+    inline CELER_FUNCTION void operator()(CoreTrackView& track) const;
 };
 
 //---------------------------------------------------------------------------//
-CELER_FUNCTION void BoundaryExecutor::operator()(CoreTrackView& track)
+// INLINE DEFINITIONS
+//---------------------------------------------------------------------------//
+/*!
+ * Initialize the track for boundary crossing.
+ */
+CELER_FUNCTION void InitBoundaryExecutor::operator()(CoreTrackView& track) const
 {
     CELER_EXPECT([track] {
         auto sim = track.sim();
@@ -44,7 +50,9 @@ CELER_FUNCTION void BoundaryExecutor::operator()(CoreTrackView& track)
     auto geo = track.geometry();
     CELER_EXPECT(geo.is_on_boundary());
 
-    // Particle entered a new volume before reaching the interaction point
+    auto select_surface = track.surface_selector();
+
+    // Move the particle across the boundary
     geo.cross_boundary();
     if (CELER_UNLIKELY(geo.failed()))
     {
@@ -53,12 +61,21 @@ CELER_FUNCTION void BoundaryExecutor::operator()(CoreTrackView& track)
     }
     else
     {
-        auto sim = track.sim();
-        sim.status(TrackStatus::killed);
+        auto surface_id = select_surface(geo);
+
+        if (!surface_id)
+        {
+            // If there's no surface, mark photon as killed
+            track.sim().status(TrackStatus::killed);
+        }
+        else
+        {
+            // initialize surface state
+            track.sim().status(TrackStatus::killed);
+        }
     }
 }
 
 //---------------------------------------------------------------------------//
-}  // namespace detail
 }  // namespace optical
 }  // namespace celeritas

@@ -2,18 +2,16 @@
 // Copyright Celeritas contributors: see top-level COPYRIGHT file for details
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
-//! \file celeritas/optical/action/BoundaryAction.cu
+//! \file celeritas/optical/surface/InitBoundaryAction.cu
 //---------------------------------------------------------------------------//
-#include "BoundaryAction.hh"
+#include "InitBoundaryAction.hh"
 
-#include "corecel/io/Logger.hh"
 #include "celeritas/optical/CoreParams.hh"
 #include "celeritas/optical/CoreState.hh"
+#include "celeritas/optical/action/ActionLauncher.device.hh"
+#include "celeritas/optical/action/TrackSlotExecutor.hh"
 
-#include "ActionLauncher.device.hh"
-#include "TrackSlotExecutor.hh"
-
-#include "detail/BoundaryExecutor.hh"
+#include "InitBoundaryExecutor.hh"
 
 namespace celeritas
 {
@@ -21,19 +19,19 @@ namespace optical
 {
 //---------------------------------------------------------------------------//
 /*!
- * Launch the boundary action on device.
+ * Launch the boundary initialization action on device.
  */
-void BoundaryAction::step(CoreParams const& params, CoreStateDevice& state) const
+void InitBoundaryAction::step(CoreParams const& params,
+                              CoreStateDevice& state) const
 {
     auto execute = make_action_thread_executor(params.ptr<MemSpace::native>(),
                                                state.ptr(),
                                                this->action_id(),
-                                               detail::BoundaryExecutor{});
+                                               InitBoundaryExecutor{});
 
     static ActionLauncher<decltype(execute)> const launch_kernel(*this);
     launch_kernel(state, execute);
 }
-
 //---------------------------------------------------------------------------//
 }  // namespace optical
 }  // namespace celeritas

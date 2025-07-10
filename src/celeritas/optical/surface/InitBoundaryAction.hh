@@ -2,11 +2,11 @@
 // Copyright Celeritas contributors: see top-level COPYRIGHT file for details
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
-//! \file celeritas/optical/action/BoundaryAction.hh
+//! \file celeritas/optical/surface/InitBoundaryAction.hh
 //---------------------------------------------------------------------------//
 #pragma once
 
-#include "ActionInterface.hh"
+#include "celeritas/optical/action/ActionInterface.hh"
 
 namespace celeritas
 {
@@ -14,14 +14,19 @@ namespace optical
 {
 //---------------------------------------------------------------------------//
 /*!
- * Move a track across a boundary.
+ * Initialize an optical boundary crossing action.
+ *
+ * Optical surface physics may take many iterations to cross a boundary,
+ * depending on its roughness and number of surface layers. This action
+ * moves the track across a boundary, calculates the surface normal, and
+ * initializes the state of the boundary crossing loop.
  */
-class BoundaryAction final : public OpticalStepActionInterface,
-                             public ConcreteAction
+class InitBoundaryAction : public OpticalStepActionInterface,
+                           public ConcreteAction
 {
   public:
     // Construct with ID
-    explicit BoundaryAction(ActionId);
+    explicit InitBoundaryAction(ActionId);
 
     // Launch kernel with host data
     void step(CoreParams const&, CoreStateHost&) const final;
