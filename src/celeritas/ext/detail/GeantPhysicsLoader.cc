@@ -203,6 +203,19 @@ bool GeantPhysicsLoader::operator()(G4VProcess const& p)
     // clang-format on
 
     auto iter = type_to_handler.find(std::type_index(typeid(p)));
+
+    // Hook for custom Cherenkov subclasses
+    if (dynamic_cast<G4Cerenkov const*>(&p))
+    {
+        iter = type_to_handler.find(std::type_index(typeid(G4Cerenkov)));
+    }
+
+    // Hook for custom scintillation subclasses
+    if (dynamic_cast<G4Scintillation const*>(&p))
+    {
+        iter = type_to_handler.find(std::type_index(typeid(G4Scintillation)));
+    }
+
     if (iter == type_to_handler.end())
     {
         // Unknown process: let someone else handle it
