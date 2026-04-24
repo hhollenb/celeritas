@@ -248,6 +248,7 @@ void OpticalProblemSetup::operator()(inp::OpticalProblem& p) const
 
     CELER_ASSERT(so.optical);
     p.generator = so.optical->generator;
+    p.detectors = so.optical->detectors;
     p.capacity = so.optical->capacity;
     p.limits = so.optical->limits;
     p.seed = CLHEP::HepRandom::getTheSeed();

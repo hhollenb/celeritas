@@ -80,6 +80,8 @@ LocalOpticalTrackOffload::LocalOpticalTrackOffload(SetupOptions const& options,
             *optical_params.aux_reg(), memspace, stream_id, capacity.tracks);
     }
 
+    track_init_callback_ = options.optical->track_init_callback;
+
     CELER_ENSURE(*this);
 }
 
@@ -140,6 +142,11 @@ void LocalOpticalTrackOffload::Push(G4Track& g4track)
     init.time = native_from_geant<units::ClhepTime>(g4track.GetGlobalTime());
     init.polarization
         = static_array_cast<real_type>(to_array(g4track.GetPolarization()));
+
+    if (track_init_callback_)
+    {
+        track_init_callback_(init);
+    }
 
     ScopedProfiling profile_this{"push"};
 

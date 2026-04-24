@@ -6,6 +6,8 @@
 //---------------------------------------------------------------------------//
 #include "DetectorParams.hh"
 
+#include <iostream>
+
 #include "corecel/cont/Range.hh"
 #include "corecel/data/CollectionBuilder.hh"
 #include "geocel/Types.hh"
@@ -59,6 +61,15 @@ DetectorParams::DetectorParams(inp::Detectors idets,
         CELER_ENSURE(host_data);
         return host_data;
     }()};
+
+    std::cout << "Number of loaded detectors: " << this->num_detectors()
+              << "\n";
+    for (auto det_id :
+         celeritas::range(celeritas::DetectorId{this->num_detectors()}))
+    {
+        std::cout << "Detector " << det_id.get() << ": "
+                  << this->detector_labels().at(det_id) << "\n";
+    }
 
     CELER_ENSURE(det_labels_.size() == detectors_.detectors.size());
 }

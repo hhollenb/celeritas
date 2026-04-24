@@ -100,6 +100,8 @@ class LocalOpticalTrackOffload final : public TrackOffloadInterface
     //  Current event ID or manager for obtaining it
     UniqueEventId event_id_;
     G4EventManager* event_manager_{nullptr};
+
+    std::function<void(TrackData const&)> track_init_callback_;
 };
 
 //---------------------------------------------------------------------------//
