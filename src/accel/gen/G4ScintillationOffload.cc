@@ -36,6 +36,7 @@ G4VParticleChange* G4ScintillationOffload::PostStepDoIt(G4Track const& aTrack,
         auto data = distribution_from_step(aStep);
         data.type = GeneratorType::scintillation;
         data.num_photons = static_cast<size_type>(this->GetNumPhotons());
+        data.continuous_edep_fraction = 1;
 
         // Push generator distribution for this step to offload
         auto& local = detail::IntegrationSingleton::instance().local_offload();

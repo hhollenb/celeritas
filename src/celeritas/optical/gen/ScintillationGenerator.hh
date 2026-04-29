@@ -170,7 +170,7 @@ CELER_FUNCTION TrackInitializer ScintillationGenerator::operator()(Generator& rn
         }
         // Generate the photon at the discrete interaction site
         return 1.0_r;
-    }();
+    }() * real_type(1 - 1e-8);
     photon.position = dist_.points[StepPoint::pre].pos;
     axpy(u, delta_pos_, &photon.position);
 
