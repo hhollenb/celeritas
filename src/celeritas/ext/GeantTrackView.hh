@@ -72,6 +72,9 @@ class GeantTrackView<Ownership::const_reference>
     // Global time in CLHEP time units (ns)
     inline Time time() const;
 
+    // Polarization vector (unit vector)
+    inline auto polarization() const -> Real3;
+
     //! Statistical weight
     real_type weight() const { return this->track().GetWeight(); }
 
@@ -186,6 +189,15 @@ auto GeantTrackView<Ownership::const_reference>::energy() const -> Energy
 auto GeantTrackView<Ownership::const_reference>::time() const -> Time
 {
     return Time{this->track().GetGlobalTime()};
+}
+
+//---------------------------------------------------------------------------//
+/*!
+ * Get track polarization.
+ */
+auto GeantTrackView<Ownership::const_reference>::polarization() const -> Real3
+{
+    return to_array(this->track().GetPolarization());
 }
 
 //---------------------------------------------------------------------------//

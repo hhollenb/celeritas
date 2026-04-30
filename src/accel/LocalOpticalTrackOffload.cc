@@ -15,6 +15,7 @@
 #include "geocel/GeantUtils.hh"
 #include "geocel/g4/Convert.hh"
 #include "celeritas/ext/GeantParticleView.hh"
+#include "celeritas/ext/GeantTrackView.hh"
 #include "celeritas/ext/GeantUnits.hh"
 #include "celeritas/global/CoreParams.hh"
 #include "celeritas/optical/CoreParams.hh"
@@ -126,7 +127,8 @@ void LocalOpticalTrackOffload::InitializeEvent(int id)
 void LocalOpticalTrackOffload::Push(G4Track& g4track)
 {
     CELER_EXPECT(*this);
-    GeantParticleView pv{*g4track.GetParticleDefinition()};
+    GeantTrackView track{g4track};
+    GeantParticleView pv = track.particle();
     CELER_EXPECT(pv.is_optical_photon());
 
     ++num_pushed_;
@@ -134,14 +136,11 @@ void LocalOpticalTrackOffload::Push(G4Track& g4track)
     // Convert Geant4 track to optical::TrackInitializer
     TrackData init;
 
-    init.energy = units::ClhepEnergy{g4track.GetKineticEnergy()};
-    init.position = native_from_geant<lengthunits::ClhepLength, real_type>(
-        g4track.GetPosition());
-    init.direction = static_array_cast<real_type>(
-        to_array(g4track.GetMomentumDirection()));
-    init.time = native_from_geant<units::ClhepTime>(g4track.GetGlobalTime());
-    init.polarization
-        = static_array_cast<real_type>(to_array(g4track.GetPolarization()));
+    init.energy = track.energy();
+    init.position = native_value_from(track.pos());
+    init.direction = track.dir();
+    init.time = native_value_from(track.time());
+    init.polarization = track.polarization();
 
     if (track_init_callback_)
     {
