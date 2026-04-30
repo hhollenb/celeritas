@@ -2,19 +2,41 @@
 // Copyright Celeritas contributors: see top-level COPYRIGHT file for details
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
-//! \file accel/gen/G4ScintillationOffload.cc
+//! \file accel/gen/ScintillationOffload.cc
 //---------------------------------------------------------------------------//
-#include "G4ScintillationOffload.hh"
+#include "ScintillationOffload.hh"
 
 #include "corecel/io/Logger.hh"
+#include "celeritas/g4/GeantOffloadUtils.hh"
 #include "celeritas/optical/gen/GeneratorData.hh"
 #include "accel/LocalOpticalGenOffload.hh"
 #include "accel/detail/IntegrationSingleton.hh"
 
-#include "G4OffloadUtils.hh"
-
 namespace celeritas
 {
+//---------------------------------------------------------------------------//
+/*!
+ * Prepare physics table for particle and enforce photon stacking.
+ *
+ * Defers physics table preparation to \c G4Scintillation, but also enforces
+ * that stacking photons is false afterwards.
+ */
+void ScintillationOffload::PreparePhysicsTable(
+    G4ParticleDefinition const& particle)
+{
+    G4Scintillation::PreparePhysicsTable(particle);
+
+    // Enforce don't stack photons
+    if (this->GetStackPhotons())
+    {
+        CELER_LOG(warning)
+            << "ScintillationOffload requires stacking photons set "
+               "to false since it sends optical photon tracks "
+               "directly to Celeritas.";
+        this->SetStackPhotons(false);
+    }
+}
+
 //---------------------------------------------------------------------------//
 /*!
  * Create a generator distribution for the given track and step.
@@ -24,8 +46,8 @@ namespace celeritas
  * creates a \c GeneratorDistributionData and pushes it to the local offload,
  * which should be \c LocalOpticalGenOffload.
  */
-G4VParticleChange* G4ScintillationOffload::PostStepDoIt(G4Track const& aTrack,
-                                                        G4Step const& aStep)
+G4VParticleChange*
+ScintillationOffload::PostStepDoIt(G4Track const& aTrack, G4Step const& aStep)
 {
     CELER_EXPECT(!this->GetStackPhotons());
 
@@ -44,7 +66,7 @@ G4VParticleChange* G4ScintillationOffload::PostStepDoIt(G4Track const& aTrack,
 
         CELER_VALIDATE(gen_offload,
                        << "LocalOpticalGenOffload required for "
-                          "G4ScintillationOffload");
+                          "ScintillationOffload");
 
         CELER_LOG_LOCAL(debug)
             << "Offloading " << data.num_photons << " scintillation photons";
@@ -53,6 +75,20 @@ G4VParticleChange* G4ScintillationOffload::PostStepDoIt(G4Track const& aTrack,
     }
 
     return result;
+}
+
+//---------------------------------------------------------------------------//
+/*!
+ * Create a generator distribution for the given track and step.
+ *
+ * Since \c G4Scintillation has a qualified call to its own \c PostStepDoIt
+ * method, this override defers to \c ScintillationOffload::PostStepDoIt
+ * instead.
+ */
+G4VParticleChange*
+ScintillationOffload::AtRestDoIt(G4Track const& aTrack, G4Step const& aStep)
+{
+    return this->PostStepDoIt(aTrack, aStep);
 }
 
 //---------------------------------------------------------------------------//

@@ -2,19 +2,39 @@
 // Copyright Celeritas contributors: see top-level COPYRIGHT file for details
 // SPDX-License-Identifier: (Apache-2.0 OR MIT)
 //---------------------------------------------------------------------------//
-//! \file accel/gen/G4CherenkovOffload.cc
+//! \file accel/gen/CherenkovOffload.cc
 //---------------------------------------------------------------------------//
-#include "G4CherenkovOffload.hh"
+#include "CherenkovOffload.hh"
 
 #include "corecel/io/Logger.hh"
+#include "celeritas/g4/GeantOffloadUtils.hh"
 #include "celeritas/optical/gen/GeneratorData.hh"
 #include "accel/LocalOpticalGenOffload.hh"
 #include "accel/detail/IntegrationSingleton.hh"
 
-#include "G4OffloadUtils.hh"
-
 namespace celeritas
 {
+//---------------------------------------------------------------------------//
+/*!
+ * Prepare physics table for particle and enforce photon stacking.
+ *
+ * Defers physics table preparation to \c G4Cerenkov, but also enforces that
+ * stacking photons is false afterwards.
+ */
+void CherenkovOffload::PreparePhysicsTable(G4ParticleDefinition const& particle)
+{
+    G4Cerenkov::PreparePhysicsTable(particle);
+
+    // Enforce don't stack photons
+    if (this->GetStackPhotons())
+    {
+        CELER_LOG(warning) << "CherenkovOffload requires stacking photons set "
+                              "to false since it sends optical photon tracks "
+                              "directly to Celeritas.";
+        this->SetStackPhotons(false);
+    }
+}
+
 //---------------------------------------------------------------------------//
 /*!
  * Create a generator distribution for the given track and step.
@@ -25,7 +45,7 @@ namespace celeritas
  * should be \c LocalOpticalGenOffload.
  */
 G4VParticleChange*
-G4CherenkovOffload::PostStepDoIt(G4Track const& aTrack, G4Step const& aStep)
+CherenkovOffload::PostStepDoIt(G4Track const& aTrack, G4Step const& aStep)
 {
     CELER_EXPECT(!this->GetStackPhotons());
 
@@ -43,7 +63,7 @@ G4CherenkovOffload::PostStepDoIt(G4Track const& aTrack, G4Step const& aStep)
 
         CELER_VALIDATE(gen_offload,
                        << "LocalOpticalGenOffload required for "
-                          "G4CherenkovOffload");
+                          "CherenkovOffload");
 
         CELER_LOG_LOCAL(debug)
             << "Offloading " << data.num_photons << " Cherenkov photons";
