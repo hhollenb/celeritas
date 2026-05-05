@@ -33,6 +33,7 @@
 #include "corecel/cont/Range.hh"
 #include "corecel/io/Logger.hh"
 #include "corecel/io/StringUtils.hh"
+#include "corecel/sys/Environment.hh"
 #include "corecel/sys/ScopedMem.hh"
 #include "corecel/sys/ScopedProfiling.hh"
 #include "geocel/inp/Model.hh"
@@ -807,6 +808,7 @@ GeantGeoParams::~GeantGeoParams()
         auto* geo_man = G4GeometryManager::GetInstance();
         if (geo_man)
         {
+            CELER_LOG(debug) << "Reopening geometry";
             geo_man->OpenGeometry(this->world());
         }
         else
