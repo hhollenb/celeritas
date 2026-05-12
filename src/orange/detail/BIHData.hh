@@ -7,11 +7,11 @@
 //---------------------------------------------------------------------------//
 #pragma once
 
-#include "corecel/OpaqueId.hh"
 #include "corecel/Types.hh"
 #include "corecel/cont/EnumArray.hh"
 #include "corecel/data/Collection.hh"
-#include "geocel/BoundingBox.hh"
+#include "corecel/grid/GridTypes.hh"
+#include "geocel/BoundingBox.hh"  // IWYU pragma: keep
 
 #include "../OrangeTypes.hh"
 
@@ -33,12 +33,10 @@ namespace detail
  */
 struct BIHInnerNode
 {
-    using real_type = fast_real_type;
-
     struct Edge
     {
         //! The position of the bounding plane along the partition axis
-        real_type bounding_plane_pos{};
+        fast_real_type bounding_plane_pos{};
         //! The child node connected to this edge
         BIHNodeId child;
         //! Bbox created by clipping an inf bbox with the bounding planes
@@ -86,13 +84,13 @@ struct BIHTreeRecord
     struct Metadata
     {
         //! The number of finite bounding boxes in the tree
-        size_type num_finite_bboxes;
+        size_type num_finite_bboxes{};
         //! The number of infinite bounding boxes, i.e., those not included in
         //! the tree itself.
-        size_type num_infinite_bboxes;
+        size_type num_infinite_bboxes{};
         //! The depth of the most embedded leaf node. This has a value of 1
         //! when the root node is a leaf.
-        size_type depth;
+        size_type depth{};
     };
 
     //// DATA ////

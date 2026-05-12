@@ -28,6 +28,7 @@ struct DetectorHit
     real_type time{};
     Real3 position{};
     VolumeInstanceId volume_instance;
+    VolumeUniqueInstanceId volume_unique_instance;
 
     //! An actual hit has a valid detector
     explicit CELER_CONSTEXPR_FUNCTION operator bool() const
@@ -50,14 +51,21 @@ struct DetectorStateData
     //! \name Type aliases
     template<class T>
     using StateItems = StateCollection<T, W, M>;
+
+    template<class T>
+    using Items = Collection<T, W, M>;
     //!@}
 
     StateItems<DetectorHit> detector_hits;
+    Items<VolumeInstanceId> volume_path;
+
+    size_type num_volume_levels{0};
 
     //! Whether data is assigned and valid
     explicit CELER_FUNCTION operator bool() const
     {
-        return !detector_hits.empty();
+        return !detector_hits.empty() && !volume_path.empty()
+               && num_volume_levels > 0;
     }
 
     //! State size
@@ -69,6 +77,8 @@ struct DetectorStateData
     {
         CELER_EXPECT(other);
         detector_hits = other.detector_hits;
+        volume_path = other.volume_path;
+        num_volume_levels = other.num_volume_levels;
         return *this;
     }
 };
@@ -80,13 +90,17 @@ struct DetectorStateData
  * Resize the state in host code.
  */
 template<MemSpace M>
-inline void
-resize(DetectorStateData<Ownership::value, M>* state, size_type size)
+inline void resize(DetectorStateData<Ownership::value, M>* state,
+                   HostCRef<VolumeParamsData> const& volumes,
+                   size_type size)
 {
     CELER_EXPECT(state);
     CELER_EXPECT(size > 0);
 
+    state->num_volume_levels = volumes.scalars.num_volume_levels + 1;
+
     resize(&state->detector_hits, size);
+    resize(&state->volume_path, size * state->num_volume_levels);
 
     CELER_ENSURE(*state);
 }
