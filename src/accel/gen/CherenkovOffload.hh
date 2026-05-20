@@ -6,7 +6,12 @@
 //---------------------------------------------------------------------------//
 #pragma once
 
+#include <optional>
+#include <string>
+#include <unordered_set>
+#include <vector>
 #include <G4Cerenkov.hh>
+#include <G4LogicalVolume.hh>
 
 namespace celeritas
 {
@@ -21,12 +26,22 @@ namespace celeritas
 class CherenkovOffload : public G4Cerenkov
 {
   public:
+    using AllowedVolNames = std::vector<std::string>;
+    using AllowedVols = std::unordered_set<G4LogicalVolume const*>;
+
+    // Construct with optional volume whitelist
+    CherenkovOffload(std::optional<AllowedVolNames> names = std::nullopt);
+
     // Prepare physics table for particle and enforce photon stacking
     void PreparePhysicsTable(G4ParticleDefinition const&) override;
 
     // Create a generator distribution for the given track and step
     G4VParticleChange*
     PostStepDoIt(G4Track const& aTrack, G4Step const& aStep) override;
+
+  private:
+    std::optional<AllowedVolNames> allowed_names_;
+    std::optional<AllowedVols> allowed_vols_;
 };
 
 //---------------------------------------------------------------------------//
