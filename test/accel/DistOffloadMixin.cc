@@ -80,8 +80,10 @@ auto DistOffloadMixin::make_physics_input() const -> PhysicsInput
         // Disable generation of Cherenkov and scintillation photons in Geant4,
         // since we're killing or sending to Celeritas
         optical->cherenkov->stack_photons = false;
-        optical->cherenkov->custom_cherenkov
-            = []() { return std::make_unique<CherenkovOffload>(); };
+        optical->cherenkov->custom_cherenkov = []() {
+            return std::make_unique<CherenkovOffload>(
+                std::vector<std::string>{"sphere"});
+        };
         optical->scintillation->stack_photons = false;
         optical->scintillation->custom_scintillation
             = []() { return std::make_unique<ScintillationOffload>(); };

@@ -6,6 +6,8 @@
 //---------------------------------------------------------------------------//
 #include "CherenkovOffload.hh"
 
+#include <G4LogicalVolumeStore.hh>
+
 #include "corecel/io/Logger.hh"
 #include "celeritas/g4/GeantOffloadUtils.hh"
 #include "celeritas/optical/gen/GeneratorData.hh"
@@ -14,6 +16,15 @@
 
 namespace celeritas
 {
+//---------------------------------------------------------------------------//
+/*!
+ * Construct with optional volume whitelist.
+ */
+CherenkovOffload::CherenkovOffload(std::optional<AllowedVolNames> names)
+    : allowed_names_(std::move(names)), allowed_vols_(std::nullopt)
+{
+}
+
 //---------------------------------------------------------------------------//
 /*!
  * Prepare physics table for particle and enforce photon stacking.
@@ -33,6 +44,27 @@ void CherenkovOffload::PreparePhysicsTable(G4ParticleDefinition const& particle)
                               "directly to Celeritas.";
         this->SetStackPhotons(false);
     }
+
+    // Make list of allowed volumes
+    if (allowed_names_)
+    {
+        auto const* volume_store = G4LogicalVolumeStore::GetInstance();
+        CELER_ASSERT(volume_store);
+        CELER_ASSERT(volume_store->IsMapValid());
+
+        allowed_vols_.emplace();
+        for (auto const& name : *allowed_names_)
+        {
+            auto const* vol = volume_store->GetVolume(name, false);
+            CELER_VALIDATE(vol,
+                           << "could not find Geant4 logical volume with name "
+                              "\""
+                           << name << "\" for CherenkovOffload whitelist");
+            allowed_vols_->insert(vol);
+        }
+
+        CELER_ENSURE(allowed_vols_->size() == allowed_names_->size());
+    }
 }
 
 //---------------------------------------------------------------------------//
@@ -50,6 +82,17 @@ CherenkovOffload::PostStepDoIt(G4Track const& aTrack, G4Step const& aStep)
     CELER_EXPECT(!this->GetStackPhotons());
 
     auto* result = G4Cerenkov::PostStepDoIt(aTrack, aStep);
+
+    // If whitelist exists, check if step is inside it
+    if (allowed_vols_)
+    {
+        auto const* vol
+            = aStep.GetPreStepPoint()->GetPhysicalVolume()->GetLogicalVolume();
+        if (allowed_vols_->count(vol) == 0)
+        {
+            return result;
+        }
+    }
 
     if (this->GetNumPhotons() > 0)
     {
