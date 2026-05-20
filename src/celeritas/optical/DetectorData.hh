@@ -7,6 +7,7 @@
 #pragma once
 
 #include "corecel/data/Collection.hh"
+#include "geocel/VolumeData.hh"
 #include "celeritas/Quantities.hh"
 #include "celeritas/optical/Types.hh"
 
