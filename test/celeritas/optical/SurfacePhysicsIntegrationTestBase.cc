@@ -84,6 +84,7 @@ void SurfacePhysicsIntegrationTestBase::run_step(RealTurn angle)
                          Real3{0, 0, 1},  // polarization
                          0,  // time
                          {},  // primary
+                         GeneratorType::size_,
                          ImplVolumeId{0}});
 
     generate_->insert(*state_, make_span(inits));

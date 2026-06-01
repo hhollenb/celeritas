@@ -87,6 +87,7 @@ DetectorExecutor::operator()(CoreTrackView const& track) const
     // Score a valid hit
     hit.detector = detector_id;
     hit.primary = sim.primary_id();
+    hit.gen_type = sim.generator_type();
     hit.energy = track.particle().energy();
     hit.time = sim.time();
     hit.position = geometry.pos();

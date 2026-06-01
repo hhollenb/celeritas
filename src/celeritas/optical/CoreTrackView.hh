@@ -134,7 +134,8 @@ CELER_FUNCTION CoreTrackView&
 CoreTrackView::operator=(TrackInitializer const& init)
 {
     // Initialiize the sim state
-    this->sim() = SimTrackView::Initializer{init.primary, init.time};
+    this->sim()
+        = SimTrackView::Initializer{init.primary, init.gen_type, init.time};
 
     // Initialize the geometry state
     auto geo = this->geometry();

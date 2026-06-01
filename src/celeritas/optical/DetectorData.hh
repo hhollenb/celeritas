@@ -25,6 +25,7 @@ struct DetectorHit
 
     DetectorId detector{};
     PrimaryId primary{};
+    GeneratorType gen_type{GeneratorType::size_};
     Energy energy;
     real_type time{};
     Real3 position{};

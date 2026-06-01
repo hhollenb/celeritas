@@ -32,6 +32,7 @@ class SimTrackView
     struct Initializer
     {
         PrimaryId primary;
+        GeneratorType gen_type{GeneratorType::size_};
         real_type time{};
     };
 
@@ -75,6 +76,9 @@ class SimTrackView
 
     // Originating primary identifier
     inline CELER_FUNCTION PrimaryId primary_id() const;
+
+    // Originating generator type
+    inline CELER_FUNCTION GeneratorType generator_type() const;
 
     // Time elapsed in the lab frame since the start of the event
     inline CELER_FUNCTION real_type time() const;
@@ -122,6 +126,7 @@ SimTrackView::SimTrackView(NativeCRef<SimParamsData> const& params,
 CELER_FUNCTION SimTrackView& SimTrackView::operator=(Initializer const& init)
 {
     states_.primary_ids[track_slot_] = init.primary;
+    states_.gen_type[track_slot_] = init.gen_type;
     states_.time[track_slot_] = init.time;
     states_.step_length[track_slot_] = {};
     states_.status[track_slot_] = TrackStatus::initializing;
@@ -249,6 +254,15 @@ CELER_FORCEINLINE_FUNCTION size_type SimTrackView::num_steps() const
 CELER_FORCEINLINE_FUNCTION PrimaryId SimTrackView::primary_id() const
 {
     return states_.primary_ids[track_slot_];
+}
+
+//---------------------------------------------------------------------------//
+/*!
+ * Originating process that generated this photon.
+ */
+CELER_FORCEINLINE_FUNCTION GeneratorType SimTrackView::generator_type() const
+{
+    return states_.gen_type[track_slot_];
 }
 
 //---------------------------------------------------------------------------//

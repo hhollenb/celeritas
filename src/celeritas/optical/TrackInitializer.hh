@@ -6,10 +6,10 @@
 //---------------------------------------------------------------------------//
 #pragma once
 
-#include "corecel/Types.hh"
 #include "geocel/Types.hh"
 #include "celeritas/Quantities.hh"
-#include "celeritas/Types.hh"
+
+#include "Types.hh"
 
 namespace celeritas
 {
@@ -45,6 +45,8 @@ struct TrackInitializer
     real_type time{};
     //! Geant4 primary ID for MC truth
     PrimaryId primary;
+    //! Generator type for MC truth
+    GeneratorType gen_type{GeneratorType::size_};
     //! Starting volume
     ImplVolumeId volume{};
 };

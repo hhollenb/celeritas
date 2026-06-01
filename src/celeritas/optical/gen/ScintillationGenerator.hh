@@ -208,6 +208,7 @@ CELER_FUNCTION TrackInitializer ScintillationGenerator::operator()(Generator& rn
     }
 
     photon.primary = dist_.primary;
+    photon.gen_type = GeneratorType::scintillation;
 
     return photon;
 }

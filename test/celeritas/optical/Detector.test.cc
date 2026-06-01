@@ -98,6 +98,7 @@ struct SimpleScores
     std::vector<real_type> x_positions;
     std::vector<real_type> y_positions;
     std::vector<real_type> z_positions;
+    std::vector<size_type> gen_types;
     std::vector<size_type> volume_instance_ids;
     std::vector<size_type> volume_unique_instance_ids;
 };
@@ -116,6 +117,7 @@ struct SimpleScorer
             scores.x_positions.push_back(hit.position[0]);
             scores.y_positions.push_back(hit.position[1]);
             scores.z_positions.push_back(hit.position[2]);
+            scores.gen_types.push_back(static_cast<size_type>(hit.gen_type));
             scores.volume_instance_ids.push_back(
                 hit.volume_instance.unchecked_get());
             scores.volume_unique_instance_ids.push_back(
@@ -141,6 +143,7 @@ TEST_F(DetectorTest, simple)
            Real3{0, 1, 0},  // pol
            0,  // time
            {},
+           GeneratorType::scintillation,
            ImplVolumeId{0}},
         TI{E{2e-6},
            Real3{0, 0, 0},  // pos
@@ -148,6 +151,7 @@ TEST_F(DetectorTest, simple)
            Real3{0, 1, 0},  // pol
            0,  // time
            {},
+           GeneratorType::cherenkov,
            ImplVolumeId{0}},
         TI{E{3e-6},
            Real3{0, 0, 0},  // pos
@@ -155,6 +159,7 @@ TEST_F(DetectorTest, simple)
            Real3{0, 1, 0},  // pol
            0,  // time
            {},
+           GeneratorType::size_,
            ImplVolumeId{0}},
         TI{E{4e-6},
            Real3{0, 0, 0},  // pos
@@ -162,6 +167,7 @@ TEST_F(DetectorTest, simple)
            Real3{0, 1, 0},  // pol
            0,  // time
            {},
+           GeneratorType::cherenkov,
            ImplVolumeId{0}},
         TI{E{5e-6},
            Real3{0, 0, 0},  // pos
@@ -169,6 +175,7 @@ TEST_F(DetectorTest, simple)
            Real3{0, 1, 0},  // pol
            0,  // time
            {},
+           GeneratorType::size_,
            ImplVolumeId{0}},
         TI{E{6e-6},
            Real3{0, 0, 0},  // pos
@@ -176,6 +183,7 @@ TEST_F(DetectorTest, simple)
            Real3{1, 0, 0},  // pol
            0,  // time
            {},
+           GeneratorType::cherenkov,
            ImplVolumeId{0}},
         TI{E{2e-7},
            Real3{0, 0, 0},  // pos
@@ -183,6 +191,7 @@ TEST_F(DetectorTest, simple)
            Real3{0, 1, 0},  // pol
            0,  // time
            {},
+           GeneratorType::scintillation,
            ImplVolumeId{0}},
     };
 
@@ -244,6 +253,16 @@ TEST_F(DetectorTest, simple)
         flight_time,
     };
 
+    static size_type const expected_gen_types[] = {
+        static_cast<size_type>(GeneratorType::scintillation),
+        static_cast<size_type>(GeneratorType::cherenkov),
+        static_cast<size_type>(GeneratorType::size_),
+        static_cast<size_type>(GeneratorType::cherenkov),
+        static_cast<size_type>(GeneratorType::size_),
+        static_cast<size_type>(GeneratorType::cherenkov),
+        static_cast<size_type>(GeneratorType::scintillation),
+    };
+
     static size_type const expected_volume_instance_ids[]
         = {5, 4, 6, 7, 5, 3, 5};
     static size_type const expected_volume_unique_instance_ids[]
@@ -257,6 +276,7 @@ TEST_F(DetectorTest, simple)
         EXPECT_VEC_SOFT_EQ(expected_y_positions, scores.y_positions);
         EXPECT_VEC_SOFT_EQ(expected_z_positions, scores.z_positions);
         EXPECT_VEC_SOFT_EQ(expected_times, scores.times);
+        EXPECT_VEC_EQ(expected_gen_types, scores.gen_types);
         EXPECT_VEC_EQ(expected_volume_instance_ids, scores.volume_instance_ids);
         EXPECT_VEC_EQ(expected_volume_unique_instance_ids,
                       scores.volume_unique_instance_ids);

@@ -184,6 +184,7 @@ TEST_F(LArSphereGeneratorTest, direct)
                                   Real3{0, 1, 0},
                                   0,
                                   {},  // primary
+                                  GeneratorType::scintillation,
                                   ImplVolumeId{0}});
 
     // Construct the runner and transport optical primaries
