@@ -16,6 +16,7 @@
 #include "celeritas/Types.hh"
 #include "celeritas/global/ActionInterface.hh"
 #include "celeritas/inp/Control.hh"
+#include "celeritas/inp/Diagnostics.hh"
 #include "celeritas/inp/Physics.hh"
 #include "celeritas/inp/Scoring.hh"
 #include "celeritas/inp/Tracking.hh"
@@ -133,6 +134,7 @@ struct OpticalSetupOptions
 
     inp::OpticalDetector detectors;
     std::function<void(optical::TrackInitializer const&)> track_init_callback;
+    std::optional<inp::StepDiagnostic> step;
 };
 
 //---------------------------------------------------------------------------//

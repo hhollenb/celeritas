@@ -254,6 +254,7 @@ void OpticalProblemSetup::operator()(inp::OpticalProblem& p) const
     p.seed = CLHEP::HepRandom::getTheSeed();
     p.timers.action = so.action_times;
     p.output_file = so.output_file;
+    p.step = so.optical->step;
 }
 
 //---------------------------------------------------------------------------//
